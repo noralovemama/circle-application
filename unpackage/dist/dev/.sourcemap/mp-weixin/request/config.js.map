@@ -1,0 +1,1 @@
+{"version":3,"file":"config.js","sources":["request/config.js"],"sourcesContent":["// 请求配置\nexport default {\n  baseUrl: 'https://wxinlu.com/',\n  timeout: 10000,\n  mock: {\n    enabled: true,\n    timeout: 100\n  }\n} "],"names":[],"mappings":";AACA,MAAe,SAAA;AAAA,EACb,SAAS;AAAA,EACT,SAAS;AAAA,EACT,MAAM;AAAA,IACJ,SAAS;AAAA,IACT,SAAS;AAAA,EACV;AACH;;"}
