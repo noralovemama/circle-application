@@ -1,9 +1,9 @@
 {
-    "name" : "circle-miniapp",
-    "appid" : "",
+    "name" : "circle-client",
+    "appid" : "__UNI__30D344A",
     "description" : "应用描述",
-    "versionName" : "1.0.0",
-    "versionCode" : "100",
+    "versionName" : "1.0.4",
+    "versionCode" : 104,
     "transformPx" : false,
     "app-plus" : {
         "usingComponents" : true,
