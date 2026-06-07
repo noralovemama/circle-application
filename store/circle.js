@@ -76,25 +76,33 @@ export const useCircleStore = defineStore('circle', {
         const res = await circleApi.getCircleList(params)
         console.log('[Store] 请求响应:', res)
 
-        if (res.status === 10000 && res.data) {
-          const { circlePageItemList: records } = res.data
-          const total=1
-		  const size=records.length
-		  const current = 0
+        if (res?.status === 10000 && res.data) {
+          const responseData = res.data || {}
+          const records = responseData.circlePageItemList || responseData.records || responseData.list || []
+
+          if (!Array.isArray(records)) {
+            throw new Error('圈子列表数据格式错误')
+          }
+
+          const total = Number(responseData.total ?? records.length)
+          const size = Number(responseData.size ?? records.length)
+          const current = Number(responseData.current ?? 1)
+
           // 更新列表数据
           if (isRefresh) {
-            this.list = records || []
+            this.list = records
           } else {
             // 使用新数组更新，确保视图更新
-            this.list = [...this.list, ...(records || [])]
+            this.list = [...this.list, ...records]
           }
+          this.error = null
           
           // 更新分页信息
-          const hasMore = Array.isArray(records) && records.length === size
+          const hasMore = size > 0 && current * size < total
           this.pagination = {
             current: hasMore ? current + 1 : current,
-            size: size,
-            total: total,
+            size: size || records.length,
+            total: total || records.length,
             hasMore
           }
 
@@ -103,15 +111,11 @@ export const useCircleStore = defineStore('circle', {
             pagination: { ...this.pagination }
           })
         } else {
-          throw new Error(res.message || '请求失败')
+          throw new Error(res?.message || res?.msg || '获取圈子列表失败')
         }
       } catch (error) {
         console.error('[Store] 请求失败:', error)
-        this.error = error.message || '获取圈子列表失败'
-        uni.showToast({
-          title: this.error,
-          icon: 'none'
-        })
+        this.error = error?.message || '获取圈子列表失败'
       } finally {
         this.loading = false
         this.refreshing = false

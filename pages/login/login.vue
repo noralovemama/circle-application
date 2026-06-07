@@ -1,9 +1,7 @@
 <template>
   <view class="login-container">
-    <!-- Logo区域 -->
-    <view class="logo-section">
-      <view class="logo-text">圈子</view>
-      <text class="slogan">你的生活指南</text>
+    <view class="brand-section">
+      <text class="brand-title">小群友</text>
     </view>
 
     <!-- 登录表单 -->
@@ -51,23 +49,9 @@
         :class="{ active: phone && validateCode }"
         @click="handleLogin"
       >
-        登录
+        {{ isLoggingIn ? '登录中...' : '登录' }}
       </button>
 
-      <!-- 用户协议 -->
-      <view class="agreement">
-        <checkbox-group @change="handleAgreementChange">
-          <label class="agreement-label">
-            <checkbox class="checkbox" :checked="agreed" color="#fe2c55"/>
-            <text class="agreement-text">
-              我已阅读并同意
-              <text class="link">《圈子用户协议》</text>
-              <text class="link">《圈子隐私政策》</text>
-              <text class="link">《圈子青少年个人信息保护规则》</text>
-            </text>
-          </label>
-        </checkbox-group>
-      </view>
     </view>
   </view>
 </template>
@@ -83,15 +67,21 @@ export default {
       userStore
     }
   },
+
+  onLoad() {
+    console.log('[Login] build: network-probe-v4')
+    this.probeLoginNetwork()
+  },
+
   data() {
     return {
       phone: '',
       validateCode: '',
-      agreed: false,
       counting: false,
       countdown: 60,
       isPhoneValid: false,
-      isRequesting: false
+      isRequesting: false,
+      isLoggingIn: false
     }
   },
   methods: {
@@ -102,22 +92,13 @@ export default {
     },
 
     async getCode() {
-      // 检查是否勾选了协议
-      if (!this.agreed) {
-        uni.showToast({
-          title: '请先勾选用户协议',
-          icon: 'none'
-        })
-        return
-      }
-      
       if (this.counting || !this.isPhoneValid || this.isRequesting) return
       
       this.isRequesting = true
       
       try {
         const res = await userApi.sendVerificationCode(this.phone)
-        if (res.status === 10000) {
+        if (Number(res.status ?? res.code) === 10000) {
           // 开始倒计时，不自动填充验证码
           this.counting = true
           this.countdown = 60
@@ -135,11 +116,12 @@ export default {
             icon: 'success'
           })
         } else {
-          throw new Error(res.message)
+          throw new Error(res.message || res.msg || '发送失败')
         }
       } catch (error) {
+        console.error('发送验证码失败:', error)
         uni.showToast({
-          title: error.message || '发送失败',
+          title: this.getErrorMessage(error, '发送失败'),
           icon: 'none'
         })
       } finally {
@@ -147,23 +129,76 @@ export default {
       }
     },
 
-    async handleLogin() {
-      if (!this.phone || !this.validateCode || !this.agreed) return
+    probeLoginNetwork() {
+      const payload = {
+        phoneNumber: '18814842880',
+        validateCode: '123456',
+        code: 'wx547471e427601166'
+      }
+      ;['https://fry-river-fish.com/token/login', 'https://www.fry-river-fish.com/token/login'].forEach((url) => {
+        const start = Date.now()
+        uni.request({
+          url,
+          method: 'POST',
+          data: payload,
+          timeout: 10000,
+          dataType: 'json',
+          header: {
+            'Content-Type': 'application/json'
+          },
+          success: (response) => {
+            console.log('[NetworkProbe] success', {
+              url,
+              duration: Date.now() - start,
+              statusCode: response.statusCode,
+              data: response.data
+            })
+          },
+          fail: (error) => {
+            console.error('[NetworkProbe] fail', {
+              url,
+              duration: Date.now() - start,
+              errMsg: error.errMsg,
+              errno: error.errno
+            })
+          },
+          complete: (result) => {
+            console.log('[NetworkProbe] complete', {
+              url,
+              duration: Date.now() - start,
+              errMsg: result.errMsg,
+              statusCode: result.statusCode
+            })
+          }
+        })
+      })
+    },
 
+    async handleLogin() {
+      if (!this.phone || !this.validateCode || this.isLoggingIn) return
+
+      this.isLoggingIn = true
       try {
-	   const { code } = await uni.login()
-	   if (!code) {
-		 throw new Error('获取登录凭证失败')
-	   }
+        const { code } = await uni.login()
+        if (!code) {
+          throw new Error('获取登录凭证失败')
+        }
+
+        console.log('[Login] wx.login code:', code)
+        console.log('[Login] token/login payload:', {
+          phoneNumber: this.phone,
+          validateCode: this.validateCode,
+          code
+        })
+
         const res = await userApi.loginWithCode(this.phone, this.validateCode, code)
         if (res.status === 10000) {
-          // 保存用户信息
-          this.userStore.setTokenInfo({
-			  openId: res.data.openId, 
-			  expireAt:res.data.expireAt
-		  })
+          await this.userStore.setTokenInfo({
+            openId: res.data.openId,
+            expireAt: res.data.expireAt,
+            userId: res.data.userId
+          })
 
-          // 获取用户详情
           try {
             await this.userStore.getUserDetail()
           } catch (error) {
@@ -181,19 +216,28 @@ export default {
             })
           }, 1500)
         } else {
-          throw new Error(res.message)
+          throw new Error(res.message || '登录失败')
         }
       } catch (error) {
         uni.showToast({
           title: error.message || '登录失败',
           icon: 'none'
         })
+      } finally {
+        this.isLoggingIn = false
       }
     },
 
-    handleAgreementChange(e) {
-      this.agreed = e.detail.value.length > 0
-    }
+    getRawErrorMessage(error, fallback) {
+      if (!error) return fallback
+      if (typeof error === 'string') return error
+      return error.message || error.errMsg || error.msg || fallback
+    },
+
+    getErrorMessage(error, fallback) {
+      return this.getRawErrorMessage(error, fallback)
+    },
+
   }
 }
 </script>
@@ -201,40 +245,54 @@ export default {
 <style lang="scss" scoped>
 .login-container {
   min-height: 100vh;
-  background-color: #fff;
-  padding: 0 40rpx;
+  padding: calc(var(--status-bar-height) + 72rpx) 40rpx 40rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+    linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%);
+  color: #2f241d;
 
-  .logo-section {
-    padding-top: 120rpx;
+  .brand-section {
+    padding-top: 36rpx;
+    margin-bottom: 64rpx;
     text-align: center;
-    margin-bottom: 80rpx;
+  }
 
-    .logo-text {
-      font-size: 80rpx;
-      font-weight: bold;
-      color: #fe2c55;
-      margin-bottom: 20rpx;
-      letter-spacing: 4rpx;
-    }
 
-    .slogan {
-      font-size: 28rpx;
-      color: #999;
-      letter-spacing: 4rpx;
-    }
+
+  .brand-title {
+    display: block;
+    font-size: 88rpx;
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -4rpx;
+    color: #2f241d;
   }
 
   .login-form {
+    padding: 34rpx 30rpx 40rpx;
+    border: 1rpx solid rgba(82, 49, 31, 0.1);
+    border-radius: 44rpx;
+    background: rgba(255, 250, 245, 0.9);
+    box-shadow: 0 24rpx 56rpx rgba(80, 43, 18, 0.12);
+    backdrop-filter: blur(18px);
+
     .input-group {
       display: flex;
       align-items: center;
-      height: 100rpx;
-      border-bottom: 1rpx solid #f0f0f0;
-      margin-bottom: 30rpx;
+      height: 104rpx;
+      padding: 0 26rpx;
+      margin-bottom: 22rpx;
+      border: 1rpx solid rgba(82, 49, 31, 0.1);
+      border-radius: 28rpx;
+      background: #fffaf5;
+      box-sizing: border-box;
 
       .country-code {
-        font-size: 32rpx;
-        color: #333;
+        font-size: 30rpx;
+        font-weight: 800;
+        color: #6f3d1d;
         margin-right: 20rpx;
       }
 
@@ -242,20 +300,22 @@ export default {
       .code-input {
         flex: 1;
         height: 100%;
-        font-size: 32rpx;
+        font-size: 30rpx;
+        color: #2f241d;
       }
 
       .get-code {
-        font-size: 28rpx;
-        color: #999;
-        padding-left: 30rpx;
+        font-size: 26rpx;
+        font-weight: 800;
+        color: #a89a91;
+        padding-left: 24rpx;
 
         &.disabled {
-          color: #999;
+          color: #b7aaa0;
         }
 
         &.active {
-          color: #fe2c55;
+          color: #9c5b2e;
         }
 
         &.requesting {
@@ -265,47 +325,33 @@ export default {
     }
 
     .input-placeholder {
-      color: #999;
-      font-size: 32rpx;
+      color: #a89a91;
+      font-size: 30rpx;
     }
 
     .login-btn {
       width: 100%;
-      height: 88rpx;
-      line-height: 88rpx;
+      height: 96rpx;
+      line-height: 96rpx;
       text-align: center;
-      background-color: #ffd6d9;
-      color: #fff;
+      margin: 42rpx 0 0;
+      border: 0;
+      border-radius: 28rpx;
+      background: #e8d8cb;
+      color: rgba(111, 61, 29, 0.58);
       font-size: 32rpx;
-      border-radius: 44rpx;
-      margin: 60rpx 0;
+      font-weight: 900;
 
       &.active {
-        background-color: #fe2c55;
+        background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+        color: #ffffff;
+        box-shadow: 0 18rpx 34rpx rgba(111, 61, 29, 0.22);
       }
-    }
 
-    .agreement {
-      .agreement-label {
-        display: flex;
-        align-items: flex-start;
-
-        .checkbox {
-          transform: scale(0.7);
-          margin-right: 4rpx;
-        }
-
-        .agreement-text {
-          font-size: 24rpx;
-          color: #999;
-          line-height: 1.4;
-
-          .link {
-            color: #333;
-          }
-        }
+      &::after {
+        border: none;
       }
     }
   }
 }
-</style> 
+</style>

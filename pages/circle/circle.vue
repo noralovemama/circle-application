@@ -1,84 +1,84 @@
 <template>
 	<view class="container">
-		<!-- 顶部图片 -->
-		<view class="image-placeholder">
-			<image class="top-image" src="/static/share-cover.png" mode="aspectFill"></image>
-		</view>
-		
-		<!-- Tab导航 -->
-		<view class="tab-nav">
-			<view 
-				class="tab-item" 
-				:class="{ active: isFromHome }"
-				@click="switchTab('around')"
-			>
-				<text class="tab-text">我周围的圈子</text>
-			</view>
-			<view 
-				class="tab-item" 
-				:class="{ active: !isFromHome }"
-				@click="switchTab('my')"
-			>
-				<text class="tab-text">我的圈子</text>
-			</view>
-		</view>
+		<view class="ambient ambient-one"></view>
+		<view class="ambient ambient-two"></view>
 
-		<!-- 列表区域 -->
 		<scroll-view class="scroll-view" scroll-y @scrolltolower="loadMore">
-			<!-- 列表内容 -->
-			<view class="list">
-				<view 
-					class="item" 
-					:class="{ 'item-disabled': isCircleStarted(item) }"
-					v-for="item in circleStore.list" 
-					:key="item.circleId"
-				>
-					<view class="item-content">
-						<image 
-							class="avatar" 
-							:class="{ 'avatar-disabled': isCircleStarted(item) }"
-							:src="getAvatar(item)" 
-							mode="aspectFill" 
-							@click.stop="navigateToUserProfile(item)"
-						/>
-						<view class="info" :class="{ 'info-disabled': isCircleStarted(item) }">
-							<text class="owner">{{getOwnerName(item)}}发起</text>
-							<text class="slogan">{{item.circleName}}</text>
-							<view class="meta">
-								<text class="time">{{item.createTime}}</text>
-								<text class="distance">{{item.distance}}公里</text>
-								<text v-if="isCircleStarted(item)" class="status-tag">已开始</text>
-							</view>
-						</view>
-						<button 
-							class="view-btn" 
-							:class="{ 
-								'view-btn-disabled': isCircleStarted(item)
-							}"
-							:disabled="isCircleStarted(item)"
-							@click.stop="navigateToDetail(item)"
+			<view class="page-content">
+
+				<view class="hero-card">
+					<view class="hero-eyebrow">小群友</view>
+					<text class="hero-title">找几个志同道合的人，和对的人约咖啡</text>
+					<text class="hero-copy">聊点感兴趣的，顺便见个面，在 6 人群深度沟通中遇见无限可能。</text>
+				</view>
+
+				<view class="cta-stack">
+					<button class="button-soft" @click="createCircle">我来组一局</button>
+				</view>
+
+				<view class="section list-section">
+					<view class="list">
+						<view
+							class="group-card"
+							:class="{ 'group-card-disabled': isCircleStarted(item) }"
+							v-for="item in circleStore.list"
+							:key="item.circleId"
 						>
-							<text class="btn-text">
-								{{ isCircleStarted(item) ? '已开始' : '查看' }}
-							</text>
-						</button>
+							<view class="group-top">
+								<image
+									class="avatar"
+									:class="{ 'avatar-disabled': isCircleStarted(item) }"
+									:src="getAvatar(item)"
+									mode="aspectFill"
+									@click.stop="navigateToUserProfile(item)"
+								/>
+								<view class="group-info">
+									<text class="owner">{{ getOwnerName(item) }}发起</text>
+									<text class="group-title">{{ item.circleName }}</text>
+								</view>
+							</view>
+
+							<text class="group-copy">{{ getCircleSummary(item) }}</text>
+							<view class="group-meta">
+								<text class="meta-pill">{{ getDistanceLabel(item) }}</text>
+								<text class="meta-pill">{{ formatActivityLabel(item.activityTime || item.createTime) }}</text>
+								<text class="meta-pill">{{ getMemberLabel(item) }}</text>
+								<text v-if="isCircleStarted(item)" class="meta-pill muted">已开始</text>
+							</view>
+							<view class="tag-row">
+								<text class="tag" v-for="tag in getCircleTags(item)" :key="tag">{{ tag }}</text>
+							</view>
+
+							<button
+								class="view-btn"
+								:class="{ 'view-btn-disabled': isCircleStarted(item) }"
+								:disabled="isCircleStarted(item)"
+								@click.stop="navigateToDetail(item)"
+							>
+								{{ isCircleStarted(item) ? '已开始' : '查看这局' }}
+							</button>
+						</view>
+					</view>
+
+					<view class="empty-card error-card" v-if="!circleStore.loading && circleStore.error">
+						<text class="empty-title">圈子列表加载失败</text>
+						<text class="empty-copy">{{ circleStore.error }}</text>
+						<button class="retry-btn" @click="retryLoad">重新加载</button>
+					</view>
+
+					<view class="empty-card" v-else-if="!circleStore.loading && circleStore.list.length === 0">
+						<text class="empty-title">暂时还没有圈子</text>
+						<text class="empty-copy">可以先发起一个 6 人小局，看看附近有没有志同道合的人。</text>
 					</view>
 				</view>
-			</view>
 
-			<!-- 加载提示 -->
-			<view class="loading" v-if="circleStore.loading">加载中...</view>
-			<view class="no-more" v-if="!circleStore.loading && !circleStore.pagination.hasMore">
-				没有更多了
+				<view class="loading" v-if="circleStore.loading">加载中...</view>
+				<view class="no-more" v-if="!circleStore.loading && !circleStore.error && circleStore.list.length > 0 && !circleStore.pagination.hasMore">
+					没有更多了
+				</view>
+
 			</view>
 		</scroll-view>
-
-		<!-- 底部按钮 -->
-		<view class="footer">
-			<button class="create-btn" @click="createCircle">
-				<text class="btn-text">创建你的圈子</text>
-			</button>
-		</view>
 	</view>
 </template>
 
@@ -172,103 +172,90 @@
 		methods: {
 			// 判断圈子是否已开始
 			isCircleStarted(item) {
-				// 当 activityTime 为 undefined 时不置灰
-				if (!item.activityTime) {
-					return false
+				const activityDate = this.parseCircleDate(item.activityTime)
+				return activityDate ? Date.now() > activityDate.getTime() : false
+			},
+
+			parseCircleDate(value) {
+				if (!value) return null
+
+				if (typeof value === 'number') {
+					const timestamp = value < 1000000000000 ? value * 1000 : value
+					const date = new Date(timestamp)
+					return isNaN(date.getTime()) ? null : date
 				}
-				
-				// 仅基于 activityTime 判断，格式为 "2025-08-15 14:10:00"
-				if (typeof item.activityTime === 'string') {
-					const activityDate = new Date(item.activityTime)
-					// 检查日期是否有效
-					if (!isNaN(activityDate.getTime())) {
-						return Date.now() > activityDate.getTime()
-					}
+
+				if (typeof value === 'string' && /^\d+$/.test(value)) {
+					const timestamp = Number(value)
+					const date = new Date(timestamp < 1000000000000 ? timestamp * 1000 : timestamp)
+					return isNaN(date.getTime()) ? null : date
 				}
-				
-				// 默认返回false（未开始）
-				return false
+
+				const normalizedValue = String(value).replace(/-/g, '/').replace('T', ' ')
+				const date = new Date(normalizedValue)
+				return isNaN(date.getTime()) ? null : date
 			},
 			async loadCurrentPage(options){
-				const userId = await uni.getStorageSync('token')
 				console.log('loadCurrentPage options:', options)
-				
-				// 根据传入的type参数来确定显示类型
-				if (options && options.type) {
-					this.isFromHome = options.type === 'around'
-					console.log('根据参数设置isFromHome:', this.isFromHome)
-				} else {
-					// 默认显示周围的圈子
-					this.isFromHome = true
-				}
-				
+				this.isFromHome = true
+
 				uni.setNavigationBarTitle({
-					title: this.isFromHome ? '圈子' : '我的圈子'
+					title: '圈子'
 				})
-				
+
+				const userId = await this.requireLoginForList()
+				if (!userId) return
+
 				// #ifdef MP-WEIXIN
 				if (uni.getSystemInfoSync().platform === 'devtools') {
 					console.log('模拟器环境，使用默认位置信息')
-					let param = {
-						isRefresh: true,
+					this.loadCircleListWithLocation({
+						userId,
 						longitude: 116.24145697699653,
 						latitude: 39.93208468967014
-					}
-					// 如果是"我的圈子"，需要传入userId
-					if (!this.isFromHome && userId) {
-						param['userId'] = userId
-					}
-					if (this.isFromHome) {
-						param['flag'] = 0
-					}else{
-						param['flag'] = 1
-					}
-					console.log('加载圈子列表参数:', param)
-					this.circleStore.getCircleList(param)
+					})
 					return
 				}
 				// #endif
-				
+
 				uni.getLocation({
 					type: 'gcj02',
 					success: ({
 						longitude,
 						latitude
 					}) => {
-						let param = {
-							isRefresh: true,
-							longitude,
-							latitude
-						}
-						// 如果是"我的圈子"，需要传入userId
-						if (!this.isFromHome && userId) {
-							param['userId'] = userId
-						}
-						if (this.isFromHome) {
-							param['flag'] = 0
-						}else{
-							param['flag'] = 1
-						}
-						console.log('加载圈子列表参数:', param)
-						this.circleStore.getCircleList(param)
+						this.loadCircleListWithLocation({ userId, longitude, latitude })
 					},
 					fail: (err) => {
-						// let param = {
-						// 	isRefresh: true
-						// }
-						// if (!this.isFromHome && userId) {
-						// 	param['userId'] = userId
-						// }
-						// console.error('获取位置失败：', err)
-						// this.circleStore.getCircleList(param)
-						uni.showToast({
-							title: err.message || '获取位置失败',
-							icon: 'none'
+						console.error('获取位置失败，使用默认位置加载圈子列表：', err)
+						this.loadCircleListWithLocation({
+							userId,
+							longitude: 116.24145697699653,
+							latitude: 39.93208468967014
 						})
 					}
 				})
 			},
-			
+
+			async requireLoginForList() {
+				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (!isLoggedIn) {
+					this.circleStore.list = []
+					this.circleStore.error = null
+					return ''
+				}
+				return this.userStore.userId || uni.getStorageSync('userId') || this.userStore.token || uni.getStorageSync('token')
+			},
+
+			loadCircleListWithLocation({ userId, longitude, latitude }) {
+				this.circleStore.getCircleList({
+					isRefresh: true,
+					userId,
+					longitude,
+					latitude,
+					flag: 0
+				})
+			},
 			loadMore() {
 				// console.log('触发加载更多')
 				// if (!this.circleStore.loading && this.circleStore.pagination.hasMore) {
@@ -276,6 +263,10 @@
 				// 		isRefresh: true
 				// 	})
 				// }
+			},
+
+			retryLoad() {
+				this.loadCurrentPage({})
 			},
 
 			getAvatar(item) {
@@ -286,8 +277,47 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
+			getCircleSummary(item) {
+				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松一点。'
+			},
+
+			getDistanceLabel(item) {
+				if (item.distance === undefined || item.distance === null || item.distance === '') {
+					return '附近'
+				}
+				const distance = Number(item.distance)
+				if (isNaN(distance)) return `${item.distance}公里`
+				return `${distance.toFixed(distance < 10 ? 1 : 0)} km`
+			},
+
+			getMemberLabel(item) {
+				const members = item.circleUserItemList || item.userList || item.members || []
+				let current = members.length || 1
+				if (item.memberCount !== undefined && item.memberCount !== null) current = item.memberCount
+				if (item.currentMembers !== undefined && item.currentMembers !== null) current = item.currentMembers
+				const max = item.maxMembers || 6
+				return `${current}/${max} 人`
+			},
+
+			getCircleTags(item) {
+				const source = [item.topic, item.slogan, item.activityLocation].filter(Boolean)
+				const tags = source.slice(0, 3)
+				return tags.length ? tags : ['固定 6 人', '先聊再见', '共同兴趣']
+			},
+
+			formatActivityLabel(value) {
+				const date = this.parseCircleDate(value)
+				if (!date) return '时间待定'
+				const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+				const hours = date.getHours().toString().padStart(2, '0')
+				const minutes = date.getMinutes().toString().padStart(2, '0')
+				return `${weekdays[date.getDay()]} ${hours}:${minutes}`
+			},
+
 			async createCircle() {
-				await this.userStore.checkLoginStatus()
+				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (!isLoggedIn) return
+
 				uni.navigateTo({
 					url: '/pages/circle/create'
 				})
@@ -302,7 +332,7 @@
 					})
 					return
 				}
-				
+
 				uni.navigateTo({
 					url: `/pages/circle/detail?circleId=${item.circleId}`
 				})
@@ -322,262 +352,362 @@
 					})
 				}
 			},
-
-			switchTab(tab) {
-				this.isFromHome = tab === 'around'
-				// 清空当前列表数据
-				this.circleStore.list = []
-				// 重新加载对应类型的数据
-				this.loadCurrentPage({
-					type: this.isFromHome ? 'around' : 'my'
-				})
-			}
 		}
 	}
 </script>
 
 <style lang="scss" scoped>
 	.container {
+		position: relative;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
-		background: #fff;
-	}
-
-	.image-placeholder {
-		height: 200px;
-		background: #f0f0f0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
 		overflow: hidden;
-		
-		.top-image {
-			width: 100%;
-			height: 100%;
-			object-fit: cover;
-		}
+		background:
+			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%);
+		color: #2f241d;
 	}
 
-	.tab-nav {
-		display: flex;
-		background: #fff;
-		border-bottom: 1px solid #f0f0f0;
-		
-		.tab-item {
-			flex: 1;
-			height: 44px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			position: relative;
-			
-			.tab-text {
-				font-size: 16px;
-				color: #666;
-				font-weight: normal;
-			}
-			
-			&.active {
-				.tab-text {
-					color: #000;
-					font-weight: bold;
-				}
-				
-				&::after {
-					content: '';
-					position: absolute;
-					bottom: 0;
-					left: 0;
-					right: 0;
-					height: 2px;
-					background: #000;
-				}
-			}
-		}
+	.ambient {
+		position: absolute;
+		border-radius: 999px;
+		pointer-events: none;
+		filter: blur(2px);
+		opacity: 0.8;
+	}
+
+	.ambient-one {
+		top: -90px;
+		right: -96px;
+		width: 260px;
+		height: 260px;
+		background: rgba(255, 255, 255, 0.52);
+	}
+
+	.ambient-two {
+		left: -120px;
+		bottom: 120px;
+		width: 280px;
+		height: 280px;
+		background: rgba(231, 200, 171, 0.42);
 	}
 
 	.scroll-view {
+		position: relative;
+		z-index: 1;
 		flex: 1;
 		height: 0;
 	}
 
+	.page-content {
+		padding: calc(var(--status-bar-height) + 48px) 18px 0;
+	}
+
+
+
+
+
+	.hero-card {
+		padding: 20px 18px;
+		border-radius: 24px;
+		background:
+			radial-gradient(circle at top right, rgba(255, 255, 255, 0.4), transparent 28%),
+			linear-gradient(135deg, #86502a, #ad6a34 58%, #d79b68);
+		box-shadow: 0 18px 35px rgba(114, 64, 28, 0.24);
+		color: #fff9f4;
+	}
+
+	.hero-eyebrow {
+		display: inline-flex;
+		align-items: center;
+		align-self: flex-start;
+		padding: 7px 10px;
+		margin-bottom: 12px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.16);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 1px;
+	}
+
+	.hero-title {
+		display: block;
+		font-size: 22px;
+		font-weight: 900;
+		line-height: 1.18;
+		letter-spacing: -1px;
+	}
+
+	.hero-copy {
+		display: block;
+		margin-top: 10px;
+		font-size: 14px;
+		line-height: 1.65;
+		color: rgba(255, 249, 244, 0.88);
+	}
+
+	.cta-stack {
+		display: grid;
+		gap: 10px;
+		margin-top: 16px;
+	}
+
+	.button-soft,
+	.view-btn {
+		border: 0;
+		border-radius: 18px;
+		font-size: 15px;
+		font-weight: 900;
+		transition: all 160ms ease;
+
+		&::after {
+			border: none;
+		}
+	}
+
+	.button-soft {
+		width: 100%;
+		height: 48px;
+		line-height: 48px;
+		margin: 0;
+		padding: 0 16px;
+	}
+
+
+	.button-soft {
+		background: rgba(255, 255, 255, 0.84);
+		border: 1px solid rgba(111, 61, 29, 0.12);
+		color: #9c5b2e;
+	}
+
+	.button-soft:active,
+	.view-btn:active,
+	.group-card:active {
+		transform: translateY(-1px);
+	}
+
+	.section {
+		margin-top: 20px;
+	}
+
+	.section-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12px;
+	}
+
+	.section-title {
+		font-size: 15px;
+		font-weight: 900;
+		letter-spacing: -0.3px;
+		color: #2f241d;
+	}
+
+	.section-subtitle {
+		font-size: 12px;
+		color: #8a766a;
+	}
+
 	.list {
-		padding: 0 12px;
+		display: grid;
+		gap: 12px;
+	}
 
-		.item {
-			padding: 16px 0;
-			border-bottom: 1px solid #f5f5f5;
+	.group-card,
+	.empty-card {
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 22px;
+		background: #fffaf5;
+		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+	}
 
-			.item-content {
-				display: flex;
-				align-items: center;
-				width: 100%;
-				box-sizing: border-box;
-			}
-			
-			// 已开始的圈子整体置灰
-			&.item-disabled {
-				opacity: 0.6;
-			}
 
-			.avatar {
-				width: 40px;
-				height: 40px;
-				border-radius: 20px;
-				margin-right: 10px;
-				background: #f5f5f5;
-				flex-shrink: 0;
-				
-				&.avatar-disabled {
-					filter: grayscale(50%);
-				}
-			}
+	.group-title,
+	.empty-title {
+		display: block;
+		font-size: 16px;
+		font-weight: 900;
+		line-height: 1.35;
+		letter-spacing: -0.3px;
+		color: #2f241d;
+	}
 
-			.info {
-				flex: 1;
-				margin-right: 8px;
-				min-width: 0;
-				overflow: hidden;
+	.group-copy,
+	.empty-copy {
+		display: block;
+		margin-top: 6px;
+		font-size: 13px;
+		line-height: 1.58;
+		color: #8a766a;
+	}
 
-				&.info-disabled {
-					.slogan, .owner {
-						color: #999;
-					}
-					.meta {
-						color: #ccc;
-					}
-				}
+	.list-section {
+		padding-bottom: 4px;
+	}
 
-				.slogan {
-					font-size: 16px;
-					color: #333;
-					font-weight: bold;
-					margin-bottom: 4px;
-					display: block;
-					text-align: left;
-					white-space: nowrap;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
 
-				.owner {
-					font-size: 14px;
-					color: #666;
-					margin-bottom: 4px;
-					display: block;
-					white-space: nowrap;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
 
-				.meta {
-					font-size: 12px;
-					color: #999;
-					display: flex;
-					align-items: center;
-					flex-wrap: wrap;
-					gap: 8px;
 
-					.time, .distance {
-						white-space: nowrap;
-					}
-					
-					.status-tag {
-						background: rgba(255, 152, 0, 0.1);
-						color: #ff9800;
-						font-size: 10px;
-						padding: 2px 6px;
-						border-radius: 8px;
-						border: 1px solid rgba(255, 152, 0, 0.3);
-						white-space: nowrap;
-					}
-				}
-			}
 
-			.view-btn {
-				min-width: 56px;
-				height: 32px;
-				line-height: 30px;
-				font-size: 14px;
-				color: #4080ff;
-				background: rgba(64, 128, 255, 0.1);
-				border: 1px solid #4080ff;
-				border-radius: 16px;
-				padding: 0 12px;
-				margin: 0;
-				transition: all 0.3s ease;
-				flex-shrink: 0;
-				white-space: nowrap;
+	.group-card {
+		padding: 16px;
+	}
 
-				&:active {
-					background: rgba(64, 128, 255, 0.2);
-					transform: scale(0.98);
-				}
-				
-				&.view-btn-disabled {
-					color: #ccc;
-					background: #f5f5f5;
-					border-color: #ddd;
-					cursor: not-allowed;
-					
-					&:active {
-						background: #f5f5f5;
-						transform: none;
-					}
-				}
+	.group-card-disabled {
+		opacity: 0.62;
+	}
 
-				.btn-text {
-					display: inline-block;
-					vertical-align: middle;
-				}
+	.group-top {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 10px;
+	}
 
-				&::after {
-					border: none;
-				}
-			}
+	.avatar {
+		width: 42px;
+		height: 42px;
+		border-radius: 15px;
+		background: #f4e7dc;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.12);
+		flex-shrink: 0;
+	}
+
+	.avatar-disabled {
+		filter: grayscale(50%);
+	}
+
+	.group-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.owner {
+		display: block;
+		margin-bottom: 4px;
+		font-size: 12px;
+		line-height: 1.3;
+		color: #8a766a;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.group-title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.group-copy {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+
+	.group-meta,
+	.tag-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.group-meta {
+		margin-top: 12px;
+	}
+
+	.tag-row {
+		margin-top: 10px;
+	}
+
+	.meta-pill,
+	.tag {
+		display: inline-flex;
+		align-items: center;
+		max-width: 100%;
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 800;
+		line-height: 1;
+	}
+
+	.meta-pill {
+		padding: 7px 10px;
+		background: #f7eadf;
+		color: #6f3d1d;
+	}
+
+	.meta-pill.muted {
+		background: #f3f4f6;
+		color: #7a7280;
+	}
+
+	.tag {
+		padding: 6px 10px;
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		background: #ffffff;
+		color: #8a766a;
+	}
+
+	.view-btn {
+		width: 100%;
+		height: 46px;
+		line-height: 46px;
+		margin: 14px 0 0;
+		padding: 0 16px;
+		background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+		box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+		color: #ffffff;
+	}
+
+	.view-btn-disabled {
+		background: #f3eee8;
+		box-shadow: none;
+		color: #b7aaa0;
+	}
+
+	.empty-card {
+		padding: 18px;
+		text-align: center;
+	}
+
+	.error-card {
+		border-color: rgba(156, 91, 46, 0.18);
+		background: linear-gradient(135deg, #fff8f1, #f7ebde);
+	}
+
+	.retry-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 120px;
+		height: 38px;
+		line-height: 38px;
+		margin: 14px auto 0;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 999px;
+		background: #2c221b;
+		color: #ffffff;
+		font-size: 13px;
+		font-weight: 900;
+
+		&::after {
+			border: none;
 		}
 	}
 
 	.loading,
 	.no-more {
-		text-align: center;
 		padding: 16px;
-		color: #999;
-		font-size: 14px;
+		text-align: center;
+		font-size: 13px;
+		color: #8a766a;
 	}
 
-	.footer {
-		padding: 12px;
-		border-top: 1px solid #f5f5f5;
-		background: rgba(255, 255, 255, 0.98);
-		backdrop-filter: blur(10px);
-
-		.create-btn {
-			background: linear-gradient(135deg, #4080ff 0%, #3366ff 100%);
-			color: #fff;
-			height: 44px;
-			line-height: 44px;
-			font-size: 16px;
-			font-weight: 500;
-			border-radius: 22px;
-			border: none;
-			box-shadow: 0 4px 12px rgba(64, 128, 255, 0.2);
-			transition: all 0.3s ease;
-
-			.btn-text {
-				display: inline-block;
-				vertical-align: middle;
-			}
-
-			&:active {
-				transform: translateY(1px);
-				box-shadow: 0 2px 8px rgba(64, 128, 255, 0.15);
-			}
-
-			&::after {
-				border: none;
-			}
-		}
-	}
 </style>

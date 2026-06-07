@@ -11,6 +11,8 @@ const MOCK_USER = {
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: uni.getStorageSync('token') || '',
+	openId: uni.getStorageSync('openId') || uni.getStorageSync('token') || '',
+	userId: uni.getStorageSync('userId') || uni.getStorageSync('token') || '',
 	expireAt: uni.getStorageSync('expireAt') || '',
 	userName: uni.getStorageSync('userName') || '',
     userInfo: {
@@ -31,25 +33,119 @@ export const useUserStore = defineStore('user', {
   }),
 
   actions: {
-	async setTokenInfo({openId, expireAt}){
-		if (openId){
-			uni.setStorageSync('token', openId)
-			this.token = openId
-		}
-		if (expireAt){
-			uni.setStorageSync('expireAt', expireAt)
-			this.expireAt = expireAt
-		}
+	pickFirst(...values) {
+		return values.find(value => value !== undefined && value !== null && value !== '')
 	},
-	
+
+	normalizeExpireAt(value) {
+		const nowSeconds = Math.floor(Date.now() / 1000)
+		const fallbackExpireAt = nowSeconds + 7 * 24 * 60 * 60
+		if (value === undefined || value === null || value === '') return fallbackExpireAt
+
+		const normalizeNumber = (rawValue) => {
+			const numericValue = Number(rawValue)
+			if (!Number.isFinite(numericValue) || numericValue <= 0) return fallbackExpireAt
+
+			if (numericValue > 1000000000000) {
+				return Math.floor(numericValue / 1000)
+			}
+
+			if (numericValue > nowSeconds) {
+				return Math.floor(numericValue)
+			}
+
+			if (numericValue <= 365 * 24 * 60 * 60) {
+				return nowSeconds + Math.floor(numericValue)
+			}
+
+			return Math.floor(numericValue)
+		}
+
+		if (typeof value === 'number') {
+			return normalizeNumber(value)
+		}
+
+		if (typeof value === 'string' && /^\d+$/.test(value)) {
+			return normalizeNumber(value)
+		}
+
+		const expireDate = new Date(String(value).replace(/-/g, '/'))
+		if (!isNaN(expireDate.getTime())) {
+			return Math.floor(expireDate.getTime() / 1000)
+		}
+
+		return fallbackExpireAt
+	},
+	async setTokenInfo(loginData = {}){
+		const userInfo = loginData.userInfo || loginData.user || loginData.profile || {}
+		const openIdValue = this.pickFirst(
+			loginData.openId,
+			loginData.openid,
+			loginData.openID,
+			userInfo.openId,
+			userInfo.openid,
+			userInfo.openID
+		)
+		const userIdValue = this.pickFirst(
+			loginData.userId,
+			loginData.userID,
+			loginData.uid,
+			loginData.id,
+			userInfo.userId,
+			userInfo.userID,
+			userInfo.uid,
+			userInfo.id,
+			openIdValue
+		)
+		const tokenValue = this.pickFirst(
+			openIdValue,
+			loginData.token,
+			loginData.accessToken,
+			loginData.access_token,
+			userInfo.token,
+			userInfo.accessToken,
+			userIdValue
+		)
+		const expireAtValue = this.normalizeExpireAt(this.pickFirst(
+			loginData.expireAt,
+			loginData.expireTime,
+			loginData.expiresAt,
+			loginData.expiresIn,
+			userInfo.expireAt,
+			userInfo.expireTime,
+			userInfo.expiresAt,
+			userInfo.expiresIn
+		))
+
+		if (!tokenValue || !userIdValue) {
+			return false
+		}
+
+		uni.setStorageSync('token', tokenValue)
+		uni.setStorageSync('openId', openIdValue || tokenValue)
+		uni.setStorageSync('userId', userIdValue)
+		uni.setStorageSync('expireAt', expireAtValue)
+
+		this.token = tokenValue
+		this.openId = openIdValue || tokenValue
+		this.userId = userIdValue
+		this.expireAt = expireAtValue
+		this.isLogin = true
+		return true
+	},
+
 	async getOpenId(){
-		return uni.getStorageSync('token')
+		return uni.getStorageSync('openId') || uni.getStorageSync('token')
 	},
-	
+
+	async getUserId(){
+		return uni.getStorageSync('userId') || uni.getStorageSync('token')
+	},
+
 	async curUserName(){
 		return uni.getStorageSync('userName')
 	},
-	
+
 	async setUserName(userName){
 		if(userName){
 			uni.setStorageSync('userName', userName)
@@ -59,54 +155,68 @@ export const useUserStore = defineStore('user', {
     // 检查登录状态
     async checkLoginStatus() {
       try {
-		// 1. 不存在token则跳至登陆页面
-		if (!this.token || !this.expireAt){
-			uni.redirectTo({
-			  url: '/pages/login/login'
-			})
-		}
-		// 2. 过期则进行刷新token
-		const expired = this.isExpired(this.expireAt)
-		if(expired){
-			uni.redirectTo({
-			  url: '/pages/login/login'
-			})
-		}
-        return false
+        this.token = uni.getStorageSync('token') || this.token
+        this.openId = uni.getStorageSync('openId') || this.openId || this.token
+        this.userId = uni.getStorageSync('userId') || this.userId || this.token
+        this.expireAt = uni.getStorageSync('expireAt') || this.expireAt
+
+        const normalizedExpireAt = this.normalizeExpireAt(this.expireAt)
+
+        if (!this.token || !this.userId || !this.expireAt || this.isExpired(normalizedExpireAt)) {
+          this.clearUserInfo()
+          this.redirectToLogin()
+          return false
+        }
+
+        this.expireAt = normalizedExpireAt
+        uni.setStorageSync('openId', this.openId)
+        uni.setStorageSync('userId', this.userId)
+        uni.setStorageSync('expireAt', this.expireAt)
+        this.isLogin = true
+        return true
       } catch (error) {
         this.clearUserInfo()
-		uni.redirectTo({
-		  url: '/pages/login/login'
-		})
+        this.redirectToLogin()
         return false
       }
     },
 	// 定义一个函数来判断当前时间是否大于 expireAt
 	isExpired(expireAt) {
-	  // 获取当前时间的时间戳，单位为毫秒
-	  const currentTime = Date.now();
-	  // 将当前时间戳转换为秒
-	  const currentTimeInSeconds = Math.floor(currentTime / 1000);
-	  // 比较当前时间（秒）和 expireAt
-	  return currentTimeInSeconds > expireAt;
+	  const expireAtSeconds = this.normalizeExpireAt(expireAt)
+	  const currentTimeInSeconds = Math.floor(Date.now() / 1000)
+	  return currentTimeInSeconds > expireAtSeconds
+	},
+
+	redirectToLogin() {
+	  const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+	  const currentPage = pages[pages.length - 1]
+	  if (currentPage && currentPage.route === 'pages/login/login') return
+	  uni.redirectTo({
+	    url: '/pages/login/login'
+	  })
 	},
     // 清除用户信息
     clearUserInfo() {
       this.token = ''
+      this.openId = ''
+      this.userId = ''
+      this.expireAt = ''
       this.userInfo = {}
       this.isLogin = false
       uni.removeStorageSync('token')
+	  uni.removeStorageSync('openId')
+	  uni.removeStorageSync('userId')
 	  uni.removeStorageSync('expireAt')
     },
 
     // 获取用户详情
     async getUserDetail() {
       try {
-        const userId = this.token
+        const userId = this.userId || uni.getStorageSync('userId') || this.token
         if (!userId) {
           throw new Error('用户未登录')
         }
-        
+
         const res = await userApi.getUserProfile(userId)
         if (res.status === 10000 && res.data) {
           this.userInfo = {
@@ -160,4 +270,4 @@ export const useUserStore = defineStore('user', {
       // throw new Error(res.message || '更新失败')
     }
   }
-}) 
+})

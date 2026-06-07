@@ -1,4 +1,5 @@
 import request from '../request'
+import config from '../config'
 
 export default {
   // 刷新 token
@@ -27,7 +28,8 @@ export default {
       url: 'token/login',
       method: 'POST',
       data: { phoneNumber: phone, validateCode, code },
-      mock: false
+      mock: false,
+      timeout: config.loginTimeout
     })
   },
 

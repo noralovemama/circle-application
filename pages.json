@@ -1,4 +1,10 @@
 {
+	"networkTimeout": {
+		"request": 60000,
+		"connectSocket": 30000,
+		"uploadFile": 30000,
+		"downloadFile": 30000
+	},
 	"leftWindow": {
 		"path": "windows/left-window.vue",
 		"style": {
@@ -67,19 +73,19 @@
 	},
 	"tabBar": {
 		"color": "#999999",
-		"selectedColor": "#ff2442",
+		"selectedColor": "#9c5b2e",
 		"backgroundColor": "#ffffff",
 		"borderStyle": "black",
 		"list": [
 			{
 				"pagePath": "pages/circle/circle",
-				"iconPath": "/static/home.png",
-				"selectedIconPath": "/static/home-selected.png"
+				"iconPath": "static/home.png",
+				"selectedIconPath": "static/home-selected.png"
 			},
 			{
 				"pagePath": "pages/user/user",
-				"iconPath": "/static/person.png",
-				"selectedIconPath": "/static/person-selected.png"
+				"iconPath": "static/person.png",
+				"selectedIconPath": "static/person-selected.png"
 			}
 		]
 	}
