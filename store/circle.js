@@ -62,8 +62,8 @@ export const useCircleStore = defineStore('circle', {
 
       try {
         let params = {
-          // current: this.pagination.current,
-          // size: this.pagination.size,
+          current: this.pagination.current,
+          size: this.pagination.size,
           longitude, 
           latitude,
           flag
@@ -76,7 +76,7 @@ export const useCircleStore = defineStore('circle', {
         const res = await circleApi.getCircleList(params)
         console.log('[Store] 请求响应:', res)
 
-        if (res?.status === 10000 && res.data) {
+        if (res && res.status === 10000 && res.data) {
           const responseData = res.data || {}
           const records = responseData.circlePageItemList || responseData.records || responseData.list || []
 
@@ -84,9 +84,13 @@ export const useCircleStore = defineStore('circle', {
             throw new Error('圈子列表数据格式错误')
           }
 
-          const total = Number(responseData.total ?? records.length)
-          const size = Number(responseData.size ?? records.length)
-          const current = Number(responseData.current ?? 1)
+          const hasTotal = responseData.total !== undefined && responseData.total !== null
+          const totalValue = hasTotal ? responseData.total : this.pagination.total
+          const sizeValue = responseData.size !== undefined && responseData.size !== null ? responseData.size : records.length
+          const currentValue = responseData.current !== undefined && responseData.current !== null ? responseData.current : 1
+          const total = Number(totalValue)
+          const size = Number(sizeValue)
+          const current = Number(currentValue)
 
           // 更新列表数据
           if (isRefresh) {
@@ -98,11 +102,11 @@ export const useCircleStore = defineStore('circle', {
           this.error = null
           
           // 更新分页信息
-          const hasMore = size > 0 && current * size < total
+          const hasMore = size > 0 && (hasTotal ? current * size < total : records.length >= size)
           this.pagination = {
             current: hasMore ? current + 1 : current,
             size: size || records.length,
-            total: total || records.length,
+            total: hasTotal ? total : this.list.length,
             hasMore
           }
 
@@ -111,11 +115,11 @@ export const useCircleStore = defineStore('circle', {
             pagination: { ...this.pagination }
           })
         } else {
-          throw new Error(res?.message || res?.msg || '获取圈子列表失败')
+          throw new Error((res && (res.message || res.msg)) || '获取圈子列表失败')
         }
       } catch (error) {
         console.error('[Store] 请求失败:', error)
-        this.error = error?.message || '获取圈子列表失败'
+        this.error = (error && error.message) || '获取圈子列表失败'
       } finally {
         this.loading = false
         this.refreshing = false
@@ -128,4 +132,4 @@ export const useCircleStore = defineStore('circle', {
       }
     }
   }
-}) 
+})

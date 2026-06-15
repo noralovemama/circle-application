@@ -93,6 +93,7 @@
 		userApi,
 		circleApi
 	} from '@/request/api'
+	import { normalizeImageForDisplay, pad2 } from '@/utils/image'
 
 	export default {
 		setup() {
@@ -115,6 +116,7 @@
 				loading: false,
 				refreshing: false,
 				isFromHome: true,
+				currentListParams: null,
 				pageOptions: null // 保存页面参数
 			}
 		},
@@ -126,6 +128,15 @@
 		},
 		async onShow(){
 			console.log('onShow 触发，pageOptions:', this.pageOptions)
+			const storedListType = uni.getStorageSync('circleListType')
+			if (storedListType) {
+				uni.removeStorageSync('circleListType')
+				this.pageOptions = {
+					type: storedListType
+				}
+				await this.loadCurrentPage(this.pageOptions)
+				return
+			}
 			// 检查是否需要刷新数据
 			if (this.circleStore.needRefresh) {
 				console.log('检测到需要刷新，重新加载数据')
@@ -244,33 +255,40 @@
 					this.circleStore.error = null
 					return ''
 				}
-				return this.userStore.userId || uni.getStorageSync('userId') || this.userStore.token || uni.getStorageSync('token')
+				return await this.userStore.getUserId()
 			},
 
 			loadCircleListWithLocation({ userId, longitude, latitude }) {
+				const flag = this.getListFlag()
+				this.currentListParams = { userId, longitude, latitude, flag }
 				this.circleStore.getCircleList({
 					isRefresh: true,
 					userId,
 					longitude,
 					latitude,
-					flag: 0
+					flag
 				})
 			},
 			loadMore() {
-				// console.log('触发加载更多')
-				// if (!this.circleStore.loading && this.circleStore.pagination.hasMore) {
-				// 	this.circleStore.getCircleList({
-				// 		isRefresh: true
-				// 	})
-				// }
+				if (!this.currentListParams || this.circleStore.loading || this.circleStore.refreshing || !this.circleStore.pagination.hasMore) {
+					return
+				}
+				this.circleStore.getCircleList({
+					isRefresh: false,
+					...this.currentListParams
+				})
 			},
 
 			retryLoad() {
-				this.loadCurrentPage({})
+				this.loadCurrentPage(this.pageOptions || {})
+			},
+
+			getListFlag() {
+				return this.pageOptions && this.pageOptions.type === 'my' ? 1 : 0
 			},
 
 			getAvatar(item) {
-				return item.ownerImage ? item.ownerImage : "/static/default-avatar.png";
+				return normalizeImageForDisplay(item.ownerImage, '/static/default-avatar.png')
 			},
 
 			getOwnerName(item) {
@@ -309,8 +327,8 @@
 				const date = this.parseCircleDate(value)
 				if (!date) return '时间待定'
 				const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-				const hours = date.getHours().toString().padStart(2, '0')
-				const minutes = date.getMinutes().toString().padStart(2, '0')
+				const hours = pad2(date.getHours())
+				const minutes = pad2(date.getMinutes())
 				return `${weekdays[date.getDay()]} ${hours}:${minutes}`
 			},
 

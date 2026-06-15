@@ -31,6 +31,7 @@
 	    type="nickname"
 	    v-model="tempUserInfo.nickname"
 	    :placeholder="showNicknameTip ? '请输入昵称' : defaultNickname"
+	    @input="onNicknameInput"
 	    @change="onNicknameChange"
 	    class="nickname-input"
 	    :class="{ 'highlight': showNicknameTip }"
@@ -52,6 +53,7 @@
         <input 
           class="input" 
           v-model="tempUserInfo.nickname" 
+          @input="onNicknameInput"
           placeholder="默认微信名称"
         />
       </view>
@@ -74,6 +76,7 @@
         <input 
           class="input" 
           v-model="formData.company" 
+          @input="onFieldInput('company', $event)"
           placeholder="请输入公司名称"
         />
       </view>
@@ -83,6 +86,7 @@
         <input 
           class="input" 
           v-model="formData.school" 
+          @input="onFieldInput('school', $event)"
           placeholder="请输入毕业院校"
         />
       </view>
@@ -92,6 +96,7 @@
         <input 
           class="input" 
           v-model="formData.position" 
+          @input="onFieldInput('position', $event)"
           placeholder="请输入职位"
         />
       </view>
@@ -116,6 +121,7 @@
           class="textarea" 
 		  maxlength="3000"
           v-model="formData.introduction" 
+          @input="onFieldInput('introduction', $event)"
           placeholder="介绍一下自己吧"
         />
       </view>
@@ -140,6 +146,7 @@
           class="textarea" 
           maxlength="500"
           v-model="formData.answer" 
+          @input="onFieldInput('answer', $event)"
           placeholder="回答你选择的问题"
         />
       </view>
@@ -148,6 +155,7 @@
     <!-- 保存按钮 -->
     <button 
       class="save-btn" 
+      :class="{ 'save-btn-disabled': isSaving }"
       @click="saveProfile" 
       :disabled="isSaving"
     >{{ isSaving ? '保存中...' : '保存' }}</button>
@@ -156,11 +164,26 @@
 
 <script>
 import userApi from '@/request/api/user'
+import { useUserStore } from '@/store/user'
+import {
+  isDataUrlImage,
+  isLocalImagePath,
+  isRemoteImageUrl,
+  normalizeImageForDisplay,
+  toSubmittableImageBase64
+} from '@/utils/image'
 
 // 确保页面被正确引用
 console.log('profileNew页面已加载')
 
 export default {
+  setup() {
+    const userStore = useUserStore()
+    return {
+      userStore
+    }
+  },
+
   data() {
     return {
 	  defaultNickname: '用户名XXX',
@@ -214,69 +237,28 @@ export default {
 	  // 头像选择回调
 	  async onChooseAvatar(e) {
 	    if (e.detail.avatarUrl) {
+	      this.tempUserInfo.avatar = e.detail.avatarUrl
+	      this.tempUserInfo.avatarBase64 = ''
+	      this.showNicknameTip = true
+
 	      try {
-	        uni.showLoading({
-	          title: '处理中...'
-	        })
-	        
-	        // 更新临时头像显示
-	        this.tempUserInfo.avatar = e.detail.avatarUrl
-	        // 显示昵称提示
-	        this.showNicknameTip = true
-	        
-	        // 转换为 base64
-	        const base64 = await this.imageToBase64(e.detail.avatarUrl)
-	        // 保存 base64 格式
-	        this.tempUserInfo.avatarBase64 = base64
-	  
-	        uni.hideLoading()
+	        this.tempUserInfo.avatarBase64 = await this.imageToBase64(e.detail.avatarUrl)
 	      } catch (error) {
-	        uni.hideLoading()
-	        console.error('头像处理失败:', error)
-	        uni.showToast({
-	          title: '头像设置失败',
-	          icon: 'none'
-	        })
+	        console.warn('头像转 base64 失败，保存时会再次尝试:', error)
 	      }
 	    }
 	  },
 	  
 	  // 昵称变更回调
+	  onNicknameInput(e) {
+	    this.tempUserInfo.nickname = e.detail.value
+	  },
+
 	  async onNicknameChange(e) {
 	    const nickname = e.detail.value
 	    if (nickname) {
 	      this.tempUserInfo.nickname = nickname
 	      this.showNicknameTip = false
-	  
-	      try {
-	        uni.showLoading({
-	          title: '更新中...'
-	        })
-	  
-	        // 如果有头像和昵称，就更新用户信息
-	        if (this.tempUserInfo.avatarBase64 && this.tempUserInfo.nickname) {
-	          await this.$store.dispatch('user/updateUserInfo', {
-	            ...this.userInfo,
-	            avatar: this.tempUserInfo.avatarBase64,
-	            nickname: this.tempUserInfo.nickname
-	          })
-	          
-	          uni.hideLoading()
-	          uni.showToast({
-	            title: '更新成功',
-	            icon: 'success'
-	          })
-	        } else {
-	          uni.hideLoading()
-	        }
-	      } catch (error) {
-	        uni.hideLoading()
-	        console.error('更新失败:', error)
-	        uni.showToast({
-	          title: '更新失败',
-	          icon: 'none'
-	        })
-	      }
 	    }
 	  },
 	  
@@ -287,11 +269,39 @@ export default {
 	        filePath,
 	        encoding: 'base64',
 	        success: (res) => {
-	          resolve(`data:image/png;base64,${res.data}`)
+	          resolve(res.data)
 	        },
 	        fail: reject
 	      })
 	    })
+	  },
+
+	  normalizeImageForDisplay(value) {
+	    return normalizeImageForDisplay(value)
+	  },
+
+	  compressImage(filePath) {
+	    return new Promise((resolve, reject) => {
+	      uni.compressImage({
+	        src: filePath,
+	        quality: 80,
+	        success: (res) => resolve(res.tempFilePath),
+	        fail: reject
+	      })
+	    })
+	  },
+
+	  async avatarToBase64(filePath) {
+	    try {
+	      return await this.imageToBase64(filePath)
+	    } catch (error) {
+	      const compressedPath = await this.compressImage(filePath)
+	      return this.imageToBase64(compressedPath)
+	    }
+	  },
+
+	  onFieldInput(field, e) {
+	    this.formData[field] = e.detail.value
 	  },
 	  
     goBack() {
@@ -307,28 +317,31 @@ export default {
 
     async loadUserProfile() {
       try {
-		const userId = await uni.getStorageSync('token')
+		const userId = await this.userStore.getUserId()
         const res = await userApi.getUserProfile(userId)
         if (res.status === 10000 && res.data) {
+		  const profileImage = res.data.image || ''
 		  this.tempUserInfo.nickname = res.data.userName
-		  this.tempUserInfo.avatarBase64 = res.data.image
+		  this.tempUserInfo.avatarBase64 = toSubmittableImageBase64(profileImage)
           this.formData = {
-            birthday: res.data.birthday || res.data.age, // 兼容旧数据
-            company: res.data.company,
-            position: res.data.position,
-            school: res.data.school,
-            introduction: res.data.introduction,
-            personality: res.data.personality,
-            question: res.data.question,
-            answer: res.data.answer
+            birthday: res.data.birthday || res.data.age || '', // 兼容旧数据
+            company: res.data.company || '',
+            position: res.data.position || '',
+            school: res.data.school || '',
+            introduction: res.data.introduction || '',
+            personality: res.data.personality || '',
+            question: res.data.question || '',
+            answer: res.data.answer || ''
           }
           this.isEdit = true
-          this.tempUserInfo.avatar = res.data.image
+          this.tempUserInfo.avatar = this.normalizeImageForDisplay(profileImage)
 		  this.tempUserInfo.nickname = res.data.userName
           // 设置选择器的值
           this.birthdayDate = this.convertToDateString(res.data.birthday || res.data.age)
-          this.mbtiIndex = this.mbtiOptions.indexOf(res.data.personality)
-          this.questionIndex = this.questionOptions.indexOf(res.data.question)
+          const mbtiIndex = this.mbtiOptions.indexOf(res.data.personality)
+          const questionIndex = this.questionOptions.indexOf(res.data.question)
+          this.mbtiIndex = mbtiIndex >= 0 ? mbtiIndex : 0
+          this.questionIndex = questionIndex >= 0 ? questionIndex : 0
         }
       } catch (error) {
         console.log('用户未创建个人信息')
@@ -373,9 +386,9 @@ export default {
 
     validateForm() {
 		
-		if (!this.tempUserInfo.avatarBase64){
+		if (!this.hasSubmittableProfileImage()){
 			  uni.showToast({
-				title: `请选择头像`,
+				title: this.tempUserInfo.avatar ? '请重新选择头像' : '请选择头像',
 				icon: 'none'
 			  })
 			  return false
@@ -388,14 +401,16 @@ export default {
 			  })
 			  return false
 		}
-      const requiredFields = {
-        nickname: '昵称',
-        birthday: '出生年月',
-        company: '所在公司',
-        school: '毕业院校'
-      }
+      const requiredFields = [
+        { field: 'nickname', label: '昵称' },
+        { field: 'birthday', label: '出生年月' },
+        { field: 'company', label: '所在公司' },
+        { field: 'school', label: '毕业院校' }
+      ]
 
-      for (const [field, label] of Object.entries(requiredFields)) {
+      for (let index = 0; index < requiredFields.length; index += 1) {
+        const field = requiredFields[index].field
+        const label = requiredFields[index].label
         if (field === 'nickname') {
           if (!this.tempUserInfo.nickname) {
             uni.showToast({
@@ -420,15 +435,49 @@ export default {
       return true
     },
 
+    hasSubmittableProfileImage() {
+      if (this.tempUserInfo.avatarBase64) return true
+      if (!this.tempUserInfo.avatar) return false
+      if (toSubmittableImageBase64(this.tempUserInfo.avatar)) return true
+      if (isDataUrlImage(this.tempUserInfo.avatar)) return true
+      return isLocalImagePath(this.tempUserInfo.avatar)
+    },
+
+    async resolveProfileImageForUpdate() {
+      if (this.tempUserInfo.avatarBase64) {
+        return this.tempUserInfo.avatarBase64
+      }
+
+      if (!this.tempUserInfo.avatar) {
+        return ''
+      }
+
+      if (isDataUrlImage(this.tempUserInfo.avatar)) {
+        this.tempUserInfo.avatarBase64 = toSubmittableImageBase64(this.tempUserInfo.avatar)
+        return this.tempUserInfo.avatarBase64
+      }
+
+      if (isRemoteImageUrl(this.tempUserInfo.avatar) && !isLocalImagePath(this.tempUserInfo.avatar)) {
+        throw new Error('请重新选择头像')
+      }
+
+      if (!isLocalImagePath(this.tempUserInfo.avatar)) {
+        throw new Error('请重新选择头像')
+      }
+
+      this.tempUserInfo.avatarBase64 = await this.avatarToBase64(this.tempUserInfo.avatar)
+      return this.tempUserInfo.avatarBase64
+    },
+
     async saveProfile() {
       if (!this.validateForm()) return
       if (this.isSaving) return
 
       this.isSaving = true
       try {
-        const userId = await uni.getStorageSync('token')
-        const userName = this.tempUserInfo?.nickname
-        const image = this.tempUserInfo?.avatarBase64
+        const userId = await this.userStore.getUserId()
+        const userName = this.tempUserInfo && this.tempUserInfo.nickname
+        const image = await this.resolveProfileImageForUpdate()
         
         // 构建完整的用户信息对象，包含所有字段
         const userProfileData = {
@@ -444,10 +493,17 @@ export default {
           answer: this.formData.answer
         }
         
-        console.log('提交的用户数据:', userProfileData)
+        console.log('提交的用户数据:', {
+          ...userProfileData,
+          image: userProfileData.image ? `[base64:${String(userProfileData.image).length}]` : ''
+        })
         const res = await userApi.updateProfile(userProfileData, userId, userName, image)
         
         if (res.status === 10000) {
+          this.userStore.setUserProfile({
+            userId,
+            ...userProfileData
+          })
           uni.showToast({
             title: '保存成功',
             icon: 'success'
@@ -458,6 +514,8 @@ export default {
               url: '/pages/profile/profileDetail?refresh=' + Date.now()
             });
           }, 500)
+        } else {
+          throw new Error(res.message || res.msg || '保存失败')
         }
       } catch (error) {
         uni.showToast({
@@ -639,4 +697,206 @@ export default {
     }
   }
 }
-</style> 
+</style>
+
+<style lang="scss" scoped>
+.profile-container {
+  min-height: 100vh;
+  padding-bottom: 112px !important;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+    linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
+  color: #2f241d;
+  box-sizing: border-box;
+}
+
+.profile-container .nav-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+  border-bottom: 1px solid rgba(82, 49, 31, 0.1);
+  background: rgba(255, 250, 245, 0.88) !important;
+  color: #2f241d !important;
+  backdrop-filter: blur(18px);
+}
+
+.profile-container .left-btn {
+  min-width: 54px;
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(111, 61, 29, 0.12);
+  border-radius: 999px;
+  background: #fffaf5;
+  box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
+  color: #6f3d1d;
+  font-size: 13px !important;
+  font-weight: 900;
+  text-align: center;
+}
+
+.profile-container .header-title {
+  flex: 1;
+  color: #2f241d !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.profile-container .right-placeholder {
+  width: 54px !important;
+}
+
+.profile-container .user-info,
+.profile-container .form-section {
+  margin: 18px 18px 0 !important;
+  border: 1px solid rgba(82, 49, 31, 0.12);
+  border-radius: 22px;
+  background: #fffaf5 !important;
+  box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+}
+
+.profile-container .user-info {
+  padding: 18px !important;
+}
+
+.profile-container .avatar-wrapper {
+  width: 72px !important;
+  height: 72px !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #f4e7dc !important;
+  box-shadow: 0 10px 22px rgba(111, 61, 29, 0.12);
+}
+
+.profile-container .avatar-wrapper::after,
+.profile-container .save-btn::after {
+  border: none;
+}
+
+.profile-container .avatar-placeholder {
+  background: #f7eadf;
+  color: #8a766a !important;
+  font-size: 13px !important;
+  font-weight: 800;
+}
+
+.profile-container .nickname-input {
+  min-width: 0;
+  height: 44px;
+  padding: 0 !important;
+  color: #2f241d !important;
+  font-size: 20px !important;
+  font-weight: 900;
+  line-height: 44px;
+}
+
+.profile-container .nickname-input.highlight {
+  border-bottom: 1px solid #9c5b2e !important;
+}
+
+.profile-container .tip-text {
+  margin: 8px 18px 0;
+  padding: 0 2px;
+  color: #9c5b2e !important;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-container .form-section {
+  padding: 18px !important;
+}
+
+.profile-container .form-title {
+  margin-bottom: 4px !important;
+  color: #2f241d !important;
+  font-size: 17px !important;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.profile-container .form-tip {
+  margin-bottom: 18px !important;
+  color: #8a766a !important;
+  font-size: 13px !important;
+  line-height: 1.45;
+}
+
+.profile-container .form-item {
+  margin-bottom: 18px !important;
+}
+
+.profile-container .form-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.profile-container .label {
+  display: block;
+  margin-bottom: 8px !important;
+  color: #2f241d !important;
+  font-size: 14px !important;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.profile-container .required {
+  color: #9c5b2e !important;
+}
+
+.profile-container .input,
+.profile-container .picker-value,
+.profile-container .textarea {
+  width: 100%;
+  border: 1px solid rgba(82, 49, 31, 0.12) !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  color: #2f241d !important;
+  font-size: 14px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.profile-container .input,
+.profile-container .picker-value {
+  height: 48px !important;
+  line-height: 48px !important;
+  padding: 0 14px !important;
+}
+
+.profile-container .textarea {
+  min-height: 132px !important;
+  padding: 12px 14px !important;
+  line-height: 1.6;
+}
+
+.profile-container .save-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 34px;
+  left: 18px !important;
+  width: auto !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  transform: none !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+  box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 900;
+}
+
+.profile-container .save-btn-disabled {
+  border: 1px solid rgba(82, 49, 31, 0.1) !important;
+  background: #f3eee8 !important;
+  box-shadow: none;
+  color: #a89a91 !important;
+  opacity: 1 !important;
+}
+</style>

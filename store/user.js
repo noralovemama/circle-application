@@ -1,13 +1,6 @@
 import { defineStore } from 'pinia'
 import { userApi } from '@/request/api'
 
-// 模拟用户数据，用于开发调试
-const MOCK_USER = {
-  userId: 'user_1',
-  userName: '测试用户',
-  avatar: '/static/default-avatar.png'
-}
-
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: uni.getStorageSync('token') || '',
@@ -34,7 +27,11 @@ export const useUserStore = defineStore('user', {
 
   actions: {
 	pickFirst(...values) {
-		return values.find(value => value !== undefined && value !== null && value !== '')
+		for (let index = 0; index < values.length; index += 1) {
+			const value = values[index]
+			if (value !== undefined && value !== null && value !== '') return value
+		}
+		return undefined
 	},
 
 	normalizeExpireAt(value) {
@@ -44,7 +41,7 @@ export const useUserStore = defineStore('user', {
 
 		const normalizeNumber = (rawValue) => {
 			const numericValue = Number(rawValue)
-			if (!Number.isFinite(numericValue) || numericValue <= 0) return fallbackExpireAt
+			if (!isFinite(numericValue) || numericValue <= 0) return fallbackExpireAt
 
 			if (numericValue > 1000000000000) {
 				return Math.floor(numericValue / 1000)
@@ -135,11 +132,11 @@ export const useUserStore = defineStore('user', {
 	},
 
 	async getOpenId(){
-		return uni.getStorageSync('openId') || uni.getStorageSync('token')
+		return this.openId || uni.getStorageSync('openId') || this.token || uni.getStorageSync('token')
 	},
 
 	async getUserId(){
-		return uni.getStorageSync('userId') || uni.getStorageSync('token')
+		return this.userId || uni.getStorageSync('userId') || this.openId || uni.getStorageSync('openId') || this.token || uni.getStorageSync('token')
 	},
 
 	async curUserName(){
@@ -157,7 +154,7 @@ export const useUserStore = defineStore('user', {
       try {
         this.token = uni.getStorageSync('token') || this.token
         this.openId = uni.getStorageSync('openId') || this.openId || this.token
-        this.userId = uni.getStorageSync('userId') || this.userId || this.token
+        this.userId = uni.getStorageSync('userId') || this.userId || this.openId || this.token
         this.expireAt = uni.getStorageSync('expireAt') || this.expireAt
 
         const normalizedExpireAt = this.normalizeExpireAt(this.expireAt)
@@ -201,18 +198,31 @@ export const useUserStore = defineStore('user', {
       this.openId = ''
       this.userId = ''
       this.expireAt = ''
-      this.userInfo = {}
+      this.userInfo = {
+        userId: '',
+        userName: '',
+        image: '',
+        birthday: '',
+        company: '',
+        position: '',
+        school: '',
+        introduction: '',
+        personality: '',
+        question: '',
+        answer: ''
+      }
       this.isLogin = false
       uni.removeStorageSync('token')
 	  uni.removeStorageSync('openId')
 	  uni.removeStorageSync('userId')
 	  uni.removeStorageSync('expireAt')
+	  uni.removeStorageSync('userName')
     },
 
     // 获取用户详情
     async getUserDetail() {
       try {
-        const userId = this.userId || uni.getStorageSync('userId') || this.token
+        const userId = await this.getUserId()
         if (!userId) {
           throw new Error('用户未登录')
         }
@@ -239,10 +249,34 @@ export const useUserStore = defineStore('user', {
         }
       } catch (error) {
         console.error('获取用户详情失败:', error)
-        // 如果获取失败，可能是用户信息不存在，但不影响登录状态
-        this.isLogin = true
+        if (error && String(error.message || error).indexOf('登录') !== -1) {
+          this.isLogin = false
+        }
         return null
       }
+    },
+
+    setUserProfile(profile = {}) {
+      const nextUserInfo = {
+        userId: profile.userId || this.userInfo.userId || this.userId || uni.getStorageSync('userId') || '',
+        userName: profile.userName || '',
+        image: profile.image || '',
+        birthday: profile.birthday || profile.age || '',
+        company: profile.company || '',
+        position: profile.position || '',
+        school: profile.school || '',
+        introduction: profile.introduction || '',
+        personality: profile.personality || '',
+        question: profile.question || '',
+        answer: profile.answer || ''
+      }
+      this.userInfo = nextUserInfo
+      this.userName = nextUserInfo.userName
+      if (nextUserInfo.userName) {
+        uni.setStorageSync('userName', nextUserInfo.userName)
+      }
+      this.isLogin = true
+      return this.userInfo
     },
 
     // 确保用户信息完整（如果store中没有用户名或头像，则获取）

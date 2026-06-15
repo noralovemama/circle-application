@@ -1,9 +1,11 @@
 import request from '../request'
 import config from '../config'
+import { toSubmittableImageBase64 } from '@/utils/image'
+import { firstFilled } from '@/utils/response'
 
 export default {
   // 刷新 token
-  refreshToken: (data) => {
+  refreshToken: (data = {}) => {
     return request({
       url: 'token/refresh',
       method: 'POST',
@@ -48,14 +50,18 @@ export default {
   },
 
   // 创建用户信息
-  createProfile: (data) => {
-    console.log('[API] 创建用户信息:', data)
+  createProfile: (data = {}) => {
+    const profileImage = toSubmittableImageBase64(data.image)
+    console.log('[API] 创建用户信息:', {
+      ...data,
+      image: profileImage ? `[base64:${String(profileImage).length}]` : ''
+    })
     return request({
-      url: 'user/profile/create',
+      url: 'user/update',
       method: 'POST',
       data: {
         userName: data.userName,
-        image: data.image,
+        image: profileImage,
         birthday: data.birthday,
         company: data.company,
         position: data.position,
@@ -63,21 +69,26 @@ export default {
         introduction: data.introduction,
         personality: data.personality,
         question: data.question,
-        answer: data.answer
+        answer: data.answer,
+        userId: data.userId
       },
-      mock: true
+      mock: false
     })
   },
 
   // 更新用户信息
-  updateProfile: (data, userId, userName, image) => {
-    console.log('[API] 更新用户信息:', data)
+  updateProfile: (data = {}, userId, userName, image) => {
+    const profileImage = toSubmittableImageBase64(firstFilled(data.image, image))
+    console.log('[API] 更新用户信息:', {
+      ...data,
+      image: profileImage ? `[base64:${String(profileImage).length}]` : ''
+    })
     return request({
       url: 'user/update',
       method: 'POST',
       data: {
-        image: data.image || image,
-        userName: data.userName || userName,
+        image: profileImage,
+        userName: firstFilled(data.userName, userName),
         birthday: data.birthday,
         company: data.company,
         position: data.position,
@@ -91,4 +102,4 @@ export default {
       mock: false
     })
   }
-} 
+}

@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小群友 Prototype v1</title>
+  <style>
+    :root {
+      --bg: #f5efe8;
+      --panel: rgba(255, 252, 248, 0.88);
+      --panel-solid: #fffaf5;
+      --line: rgba(82, 49, 31, 0.12);
+      --text: #2f241d;
+      --muted: #8a766a;
+      --brand: #9c5b2e;
+      --brand-strong: #6f3d1d;
+      --accent: #e7c8ab;
+      --accent-soft: #f7eadf;
+      --success: #2f8f60;
+      --shadow: 0 20px 50px rgba(80, 43, 18, 0.14);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.85), transparent 28%),
+        linear-gradient(160deg, #f7f1eb 0%, #efe2d4 42%, #ead8c6 100%);
+    }
+
+    body {
+      padding: 32px;
+    }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px minmax(360px, 430px) minmax(300px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      border-radius: 30px;
+    }
+
+    .sidebar,
+    .notes {
+      padding: 24px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #b76b33, #6f3d1d);
+      box-shadow: 0 0 0 6px rgba(183, 107, 51, 0.14);
+    }
+
+    .headline {
+      font-size: 34px;
+      line-height: 1.05;
+      margin: 0 0 12px;
+      letter-spacing: -0.04em;
+    }
+
+    .subhead {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .stair-copy {
+      display: grid;
+      gap: 6px;
+      color: var(--text);
+      justify-items: start;
+      text-align: left;
+    }
+
+    .stair-copy.sidebar-steps {
+      margin-top: 6px;
+    }
+
+    .stair-copy.hero-steps {
+      color: #fffaf5;
+      margin-top: 8px;
+    }
+
+    .stair-line {
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+    }
+
+    .sidebar-steps .stair-line:nth-child(1) {
+      font-size: 22px;
+      margin-left: 0;
+    }
+
+    .sidebar-steps .stair-line:nth-child(2) {
+      font-size: 22px;
+      margin-left: 0;
+    }
+
+    .sidebar-steps .stair-line:nth-child(3) {
+      font-size: 22px;
+      margin-left: 0;
+    }
+
+    .hero-steps .stair-line:nth-child(1) {
+      font-size: 24px;
+      margin-left: 0;
+    }
+
+    .hero-steps .stair-line:nth-child(2) {
+      font-size: 24px;
+      margin-left: 0;
+    }
+
+    .hero-steps .stair-line:nth-child(3) {
+      font-size: 24px;
+      margin-left: 0;
+    }
+
+    .stair-tail {
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .hero-steps .stair-tail {
+      color: rgba(255, 249, 244, 0.88);
+      font-size: 14px;
+      margin-left: 0;
+    }
+
+    .sidebar-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+
+    .sidebar-title,
+    .notes-title {
+      margin: 0 0 12px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .screen-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .screen-link {
+      width: 100%;
+      text-align: left;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 18px;
+      padding: 14px 14px 13px;
+      cursor: pointer;
+      color: var(--text);
+      transition: 160ms ease;
+    }
+
+    .screen-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(111, 61, 29, 0.12);
+    }
+
+    .screen-link.active {
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      color: #fff;
+      box-shadow: 0 14px 30px rgba(111, 61, 29, 0.24);
+    }
+
+    .screen-link strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .screen-link span {
+      font-size: 12px;
+      opacity: 0.78;
+      line-height: 1.5;
+    }
+
+    .prototype-shell {
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .phone {
+      width: 390px;
+      min-height: 844px;
+      background: #fcf8f3;
+      border-radius: 42px;
+      overflow: hidden;
+      border: 1px solid rgba(59, 32, 18, 0.18);
+      box-shadow:
+        0 2px 10px rgba(255, 255, 255, 0.45) inset,
+        0 40px 70px rgba(67, 36, 18, 0.2);
+      position: relative;
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 30px;
+      border-radius: 999px;
+      background: #1e1714;
+      z-index: 4;
+    }
+
+    .status-bar {
+      height: 54px;
+      padding: 18px 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--text);
+    }
+
+    .screen {
+      display: none;
+      min-height: 790px;
+      padding: 0 18px 18px;
+      position: relative;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .topbar-action,
+    .back-link {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--brand);
+      cursor: pointer;
+    }
+
+    .hero-card,
+    .card,
+    .metric-card,
+    .hint-card,
+    .message-bubble,
+    .chip-field,
+    .input-field {
+      border-radius: var(--radius-lg);
+    }
+
+    .hero-card {
+      padding: 18px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.4), transparent 26%),
+        linear-gradient(135deg, #86502a, #ad6a34 58%, #d79b68);
+      color: #fff9f4;
+      box-shadow: 0 18px 35px rgba(114, 64, 28, 0.24);
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 28px;
+      line-height: 1.05;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px;
+    }
+
+    .hero-copy {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255, 249, 244, 0.88);
+    }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-head h3 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .cta-stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .button,
+    .button-soft,
+    .button-dark {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 16px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .button:hover,
+    .button-soft:hover,
+    .button-dark:hover {
+      transform: translateY(-1px);
+    }
+
+    .button {
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      color: #fff;
+      box-shadow: 0 14px 26px rgba(111, 61, 29, 0.22);
+    }
+
+    .button-soft {
+      background: #fff;
+      color: var(--brand);
+      border: 1px solid rgba(111, 61, 29, 0.12);
+    }
+
+    .button-dark {
+      background: #2c221b;
+      color: #fff;
+    }
+
+    .discover-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .mini-card,
+    .group-card,
+    .profile-card,
+    .scope-card {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+    }
+
+    .mini-card strong,
+    .group-card strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .mini-card p,
+    .group-card p,
+    .scope-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .group-card {
+      cursor: pointer;
+    }
+
+    .group-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+
+    .meta-pill,
+    .tag,
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .meta-pill {
+      background: var(--accent-soft);
+      color: var(--brand-strong);
+      padding: 7px 10px;
+    }
+
+    .meta-pill.organizer {
+      background: linear-gradient(135deg, #2c221b, #4a3528);
+      color: #fff;
+    }
+
+    .meta-pill.participant {
+      background: #f4e7dc;
+      color: var(--brand-strong);
+    }
+
+    button.meta-pill {
+      border: 0;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    button.meta-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(111, 61, 29, 0.12);
+    }
+
+    .tag {
+      padding: 6px 10px;
+      background: #fff;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+
+    .tag.active,
+    .chip.active {
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .card {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      padding: 16px;
+    }
+
+    .detail-banner {
+      padding: 18px;
+      background:
+        radial-gradient(circle at right top, rgba(255, 255, 255, 0.22), transparent 26%),
+        linear-gradient(135deg, #774221, #a36235 64%, #cf9363);
+      color: #fff;
+    }
+
+    .detail-banner .group-meta {
+      margin-bottom: 0;
+    }
+
+    .inline-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 12px 14px;
+      color: var(--text);
+    }
+
+    .metric-card span {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .metric-card strong {
+      font-size: 17px;
+      letter-spacing: -0.03em;
+    }
+
+    .message-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .message-row {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .message-row.clickable {
+      cursor: pointer;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+    }
+
+    .avatar.alt {
+      background: linear-gradient(135deg, #1a8f7f, #0a6c5f);
+    }
+
+    .avatar.pink {
+      background: linear-gradient(135deg, #d16f8b, #ae496a);
+    }
+
+    .message-bubble {
+      background: #f7f2ec;
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      padding: 12px;
+    }
+
+    .message-name {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .message-name strong {
+      font-size: 13px;
+    }
+
+    .message-name span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .role-badge.organizer {
+      background: #2c221b;
+      color: #fff;
+    }
+
+    .role-badge.participant {
+      background: #f4e7dc;
+      color: var(--brand-strong);
+    }
+
+    .message-bubble p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #4a382d;
+    }
+
+    .qr-card {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 12px;
+      padding: 14px;
+      background: linear-gradient(135deg, #edf9f3, #f8fffb);
+      border: 1px solid rgba(47, 143, 96, 0.18);
+      border-radius: 22px;
+    }
+
+    .qr-box {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      border: 2px dashed rgba(47, 143, 96, 0.32);
+      display: grid;
+      place-items: center;
+      color: var(--success);
+      font-size: 12px;
+      font-weight: 800;
+      background:
+        linear-gradient(90deg, rgba(47, 143, 96, 0.06) 1px, transparent 1px),
+        linear-gradient(rgba(47, 143, 96, 0.06) 1px, transparent 1px),
+        #fff;
+      background-size: 10px 10px;
+    }
+
+    .qr-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .qr-card p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.65;
+      color: #49755f;
+    }
+
+    .hint-card {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #fff5eb, #f9eadc);
+      border: 1px solid rgba(156, 91, 46, 0.14);
+    }
+
+    .hint-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .hint-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .auth-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .input-label {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .input-field {
+      padding: 13px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      padding: 9px 12px;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .chip-field {
+      background: #f8f3ee;
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      padding: 13px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .auth-status-card,
+    .login-option,
+    .place-option,
+    .location-picker,
+    .map-search,
+    .map-summary {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+    }
+
+    .auth-status-card {
+      padding: 14px 16px;
+      margin-top: 14px;
+    }
+
+    .auth-status-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .auth-status-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .login-hero {
+      padding: 20px 18px;
+      background:
+        radial-gradient(circle at right top, rgba(255, 255, 255, 0.22), transparent 26%),
+        linear-gradient(135deg, #774221, #a36235 64%, #cf9363);
+      color: #fff;
+      border-radius: 24px;
+      box-shadow: 0 18px 35px rgba(114, 64, 28, 0.22);
+    }
+
+    .login-hero strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 24px;
+      letter-spacing: -0.04em;
+    }
+
+    .login-hero p {
+      margin: 0;
+      color: rgba(255, 249, 244, 0.88);
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .login-stack {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .login-option {
+      width: 100%;
+      padding: 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .login-option:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(98, 63, 36, 0.08);
+    }
+
+    .login-option strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .login-option p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .divider-label {
+      margin: 6px 0 2px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .location-picker {
+      width: 100%;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+    }
+
+    .location-picker strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .location-picker p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .location-action {
+      flex-shrink: 0;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f4e7dc;
+      color: var(--brand-strong);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .map-search {
+      padding: 13px 14px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .map-stage {
+      position: relative;
+      overflow: hidden;
+      margin-top: 14px;
+      height: 244px;
+      border-radius: 24px;
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
+        linear-gradient(90deg, rgba(156, 91, 46, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(156, 91, 46, 0.08) 1px, transparent 1px),
+        radial-gradient(circle at 18% 24%, rgba(143, 191, 148, 0.32), transparent 18%),
+        radial-gradient(circle at 76% 78%, rgba(143, 191, 148, 0.24), transparent 18%),
+        linear-gradient(135deg, #f5efe8, #f0e2d4);
+      background-size: auto, 32px 32px, 32px 32px, auto, auto, auto;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .map-road {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(156, 91, 46, 0.06);
+    }
+
+    .map-road.one {
+      top: 48px;
+      left: -18px;
+      width: 250px;
+      height: 18px;
+      transform: rotate(-9deg);
+    }
+
+    .map-road.two {
+      top: 112px;
+      right: -28px;
+      width: 228px;
+      height: 18px;
+      transform: rotate(12deg);
+    }
+
+    .map-road.three {
+      top: -24px;
+      left: 182px;
+      width: 22px;
+      height: 290px;
+      transform: rotate(6deg);
+    }
+
+    .map-pin {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 18px 18px 18px 4px;
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      box-shadow: 0 12px 20px rgba(111, 61, 29, 0.22);
+      transform: rotate(45deg);
+    }
+
+    .map-pin span {
+      transform: rotate(-45deg);
+    }
+
+    .map-pin.main {
+      top: 88px;
+      left: 172px;
+    }
+
+    .map-pin.alt {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #d9b38c, #b98456);
+    }
+
+    .map-pin.alt.one {
+      top: 56px;
+      left: 80px;
+    }
+
+    .map-pin.alt.two {
+      top: 154px;
+      left: 268px;
+    }
+
+    .map-float {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 250, 244, 0.92);
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      box-shadow: 0 10px 22px rgba(98, 63, 36, 0.08);
+    }
+
+    .map-float strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .map-float span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .map-summary {
+      padding: 14px 16px;
+      margin-top: 14px;
+    }
+
+    .map-summary strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .map-summary p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .place-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .place-option {
+      width: 100%;
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: 160ms ease;
+      box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+    }
+
+    .place-option.active {
+      border-color: rgba(111, 61, 29, 0.22);
+      background: linear-gradient(135deg, #fff8f1, #f7ebde);
+    }
+
+    .place-option strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .place-option p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .profile-card {
+      text-align: center;
+      padding: 22px 18px;
+    }
+
+    .profile-badge {
+      width: 70px;
+      height: 70px;
+      border-radius: 24px;
+      margin: 0 auto 12px;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      color: #fff;
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      box-shadow: 0 18px 32px rgba(111, 61, 29, 0.24);
+    }
+
+    .profile-card h3 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    .profile-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stats-grid .card {
+      padding: 14px 8px;
+      text-align: center;
+    }
+
+    .stats-grid strong {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .stats-grid span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .member-hero {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 18px;
+      background: linear-gradient(135deg, #fff4e8, #f8e4cf);
+      border: 1px solid rgba(156, 91, 46, 0.12);
+      border-radius: 24px;
+    }
+
+    .member-avatar {
+      width: 76px;
+      height: 76px;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+      color: #fff;
+      background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+      box-shadow: 0 16px 28px rgba(111, 61, 29, 0.2);
+    }
+
+    .member-avatar.alt {
+      background: linear-gradient(135deg, #1a8f7f, #0a6c5f);
+    }
+
+    .member-avatar.pink {
+      background: linear-gradient(135deg, #d16f8b, #ae496a);
+    }
+
+    .member-hero h3 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      letter-spacing: -0.04em;
+    }
+
+    .member-role-line {
+      margin-bottom: 8px;
+    }
+
+    .member-identity-note {
+      margin: 0 0 8px;
+      font-size: 12px;
+      color: #7a5c49;
+      line-height: 1.6;
+    }
+
+    .member-hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .member-section {
+      margin-top: 14px;
+    }
+
+    .member-section strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .member-facts {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .member-facts .card {
+      padding: 14px;
+    }
+
+    .member-facts span {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .member-facts strong {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+    }
+
+    .edit-profile-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 12px;
+    }
+
+    .group-intro {
+      padding: 16px 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .group-intro strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .group-intro p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .group-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .group-pill.required {
+      background: #2c221b;
+      color: #fff;
+    }
+
+    .group-pill.recommended {
+      background: #f4e7dc;
+      color: var(--brand-strong);
+    }
+
+    .group-pill.optional {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .field-head strong {
+      font-size: 14px;
+    }
+
+    .field-head span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .scope-card ul,
+    .notes ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .notes-card {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      border-radius: 22px;
+      padding: 18px;
+      margin-top: 14px;
+    }
+
+    .notes-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .notes-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .tabbar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(255, 252, 248, 0.94);
+      border: 1px solid rgba(82, 49, 31, 0.08);
+      box-shadow: 0 14px 28px rgba(77, 45, 24, 0.12);
+    }
+
+    .tab {
+      border: 0;
+      background: transparent;
+      border-radius: 18px;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: #f4e7dc;
+      color: var(--brand-strong);
+    }
+
+    .ghost-note {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .prototype-shell {
+        order: -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="brand-mark">
+        <span class="brand-dot"></span>
+        <span>小群友 Prototype</span>
+      </div>
+      <h1 class="headline">找几个志同道合的人，和对的人约咖啡</h1>
+      <div class="stair-copy sidebar-steps">
+        <div class="stair-tail">聊点感兴趣的，顺便见个面，在 6 人群深度沟通中遇见无限可能</div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">Screens</h2>
+        <div class="screen-list" id="screenList"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">MVP Focus</h2>
+        <div class="notes-card">
+          <strong>这版先跑最小闭环</strong>
+          <p>先别把状态设计做重。只看 6 人小局有没有人发、有没有人报、能不能真的把第一次碰头接住。</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel prototype-shell">
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons">
+            <span>5G</span>
+            <span>89%</span>
+          </div>
+        </div>
+
+        <section class="screen active" data-screen="home">
+          <div class="topbar">
+            <div class="topbar-title">小群友</div>
+            <div class="topbar-action" data-go="scope">MVP范围</div>
+          </div>
+
+          <div class="hero-card">
+            <div class="hero-eyebrow">小群友</div>
+            <h2 class="hero-title" style="font-size: 22px; margin-bottom: 2px;">找几个志同道合的人，和对的人约咖啡</h2>
+            <div class="stair-copy hero-steps">
+              <div class="stair-tail">聊点感兴趣的，顺便见个面，在 6 人群深度沟通中遇见无限可能</div>
+            </div>
+          </div>
+
+          <div class="cta-stack">
+            <button class="button" data-go="nearby">去附近看看</button>
+            <button class="button-soft" data-auth-go="create">我来组一局</button>
+          </div>
+          <div class="auth-note" id="homeAuthNote">登录后可发起组局、维护个人资料，也方便后续承接留言和微信群。</div>
+
+          <div class="section">
+            <div class="section-head">
+              <h3>现在更容易发出的局</h3>
+              <span>最适合试水</span>
+            </div>
+            <div class="discover-grid">
+              <div class="mini-card">
+                <strong>西班牙语入门局</strong>
+                <p>先因为都想学两句西语坐下来，再自然认识彼此。</p>
+              </div>
+              <div class="mini-card">
+                <strong>周末附近徒步搭子局</strong>
+                <p>先聊路线和装备，再看看这群人以后能不能一起去更远一点的地方。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="nearby">
+          <div class="topbar">
+            <div class="back-link" data-go="home">返回</div>
+            <div class="topbar-title">附近组局</div>
+            <div class="topbar-action" data-go="my-groups">我的组局</div>
+          </div>
+
+          <div class="input-field">试试搜：二次元 / 西班牙语 / 周末徒步</div>
+
+          <div class="section">
+            <div class="group-card" data-go="detail">
+              <strong>西班牙语入门局</strong>
+              <p>0.2 km · 今天 19:30 · 4/6 人</p>
+              <div class="group-meta">
+                <span class="meta-pill">固定 6 人</span>
+                <span class="meta-pill">零基础也行</span>
+                <span class="meta-pill">先聊再学</span>
+              </div>
+              <button class="button">查看这局</button>
+            </div>
+
+            <div class="group-card">
+              <strong>二次元同好局</strong>
+              <p>0.6 km · 周五 20:00 · 3/6 人</p>
+              <div class="group-meta">
+                <span class="tag">动漫</span>
+                <span class="tag">游戏</span>
+                <span class="tag">周边交换</span>
+              </div>
+            </div>
+
+            <div class="group-card">
+              <strong>周末附近徒步搭子局</strong>
+              <p>2.1 km · 周日 10:30 · 2/6 人</p>
+              <div class="group-meta">
+                <span class="tag">徒步</span>
+                <span class="tag">附近路线</span>
+                <span class="tag">固定 6 人</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="detail">
+          <div class="topbar">
+            <div class="back-link" data-go="nearby">返回</div>
+            <div class="topbar-title">组局详情</div>
+            <div class="topbar-action">分享</div>
+          </div>
+
+          <div class="detail-banner card">
+            <div class="hero-eyebrow">西班牙语</div>
+            <h2 class="hero-title" style="font-size: 26px;">西班牙语入门局</h2>
+            <p class="hero-copy">适合想从零开始碰一点西语的人。先因为共同兴趣坐下来，再慢慢认识彼此。</p>
+            <div class="inline-stats">
+              <div class="metric-card">
+                <span>活动时间</span>
+                <strong>周三 19:30</strong>
+              </div>
+              <div class="metric-card">
+                <span>已报名人数</span>
+                <strong>4 / 6</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="card">
+              <strong style="display:block; margin-bottom:8px;">这局适合谁</strong>
+              <p style="margin:0; color:var(--muted); font-size:14px; line-height:1.7;">
+                适合对西班牙语有兴趣、但不想把第一次见面搞得太正式的人。不是上课，也不是硬社交。固定 6 个人，先有共同话题，再看看聊不聊得来。
+              </p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <h3>已报名成员</h3>
+              <span>还差 2 人</span>
+            </div>
+            <div class="group-meta">
+              <button class="meta-pill organizer" data-member="xiaoming">😊 小明 · 组织者</button>
+              <button class="meta-pill participant" data-member="ahua">👩 阿花 · 参与者</button>
+              <button class="meta-pill participant" data-member="kevin">🧑 Kevin · 参与者</button>
+              <button class="meta-pill participant" data-member="linlin">🙂 林林 · 参与者</button>
+            </div>
+          </div>
+
+          <div class="hint-card section">
+            <strong>先在留言里对时间地点</strong>
+            <p>这版 MVP 先用留言板和微信群承接即时沟通，重点是让大家真的顺利碰头。</p>
+          </div>
+
+          <div class="cta-stack">
+            <button class="button" data-auth-go="signup-success">报名参加</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="signup-success">
+          <div class="topbar">
+            <div class="back-link" data-go="detail">返回</div>
+            <div class="topbar-title">报名成功</div>
+            <div class="topbar-action">搞定</div>
+          </div>
+
+          <div class="hint-card">
+            <strong>你已经进这局了</strong>
+            <p>现在是 4/6 人。先去留言板打个招呼、确认细节；组满后会在留言里补充微信群二维码。</p>
+          </div>
+
+          <div class="card section">
+            <strong style="display:block; margin-bottom:8px;">你加入的组局</strong>
+            <p style="margin:0; font-size:14px; color:var(--muted); line-height:1.7;">
+              西班牙语入门局<br />
+              周三 19:30 · Manner 静安店 · 固定 6 人
+            </p>
+          </div>
+
+          <div class="section">
+            <div class="chip-field">1. 去留言板看集合信息</div>
+            <div class="chip-field" style="margin-top: 10px;">2. 留一句自我介绍，第一次见面会自然很多</div>
+            <div class="chip-field" style="margin-top: 10px;">3. 人齐之后，用微信群对最后细节，先把这次碰头顺利接住</div>
+          </div>
+
+          <div class="cta-stack">
+            <button class="button" data-go="comments">去留言板</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="comments">
+          <div class="topbar">
+            <div class="back-link" data-go="signup-success">返回</div>
+            <div class="topbar-title">组局留言</div>
+            <div class="topbar-action">6/6 已组满</div>
+          </div>
+
+          <div class="card">
+            <strong style="display:block; margin-bottom:6px;">西班牙语入门局</strong>
+            <p style="margin:0; color:var(--muted); font-size:13px;">周三 19:30 · Manner 静安店 · 固定 6 人</p>
+          </div>
+
+          <div class="section message-list">
+            <div class="message-row clickable" data-member="xiaoming">
+              <div class="avatar">😊</div>
+              <div class="message-bubble">
+                <div class="message-name"><strong>小明 <span class="role-badge organizer">组织者</span></strong><span>08:30</span></div>
+                <p>明晚 19:20 在门口碰头。我带了几张西语点单小卡片，我们先轻松聊聊，坐下来就开始。</p>
+              </div>
+            </div>
+            <div class="message-row clickable" data-member="ahua">
+              <div class="avatar alt">👩</div>
+              <div class="message-bubble">
+                <div class="message-name"><strong>阿花 <span class="role-badge participant">参与者</span></strong><span>昨天</span></div>
+                <p>我完全零基础，但最近一直想学西班牙语。感觉有共同话题会比纯聊天更自然一点。</p>
+              </div>
+            </div>
+            <div class="message-row clickable" data-member="kevin">
+              <div class="avatar pink">🧑</div>
+              <div class="message-bubble">
+                <div class="message-name"><strong>Kevin <span class="role-badge participant">参与者</span></strong><span>昨天</span></div>
+                <p>我也是冲着共同兴趣来的，不用真的学得很认真，先因为这件事坐下来认识一下就挺好。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section qr-card">
+            <div class="qr-box">微信群</div>
+            <div>
+              <strong>微信群二维码</strong>
+              <p>MVP 先用微信群承接找路、迟到、临时改时间这类即时沟通。先验证大家能不能真的顺利碰头。</p>
+            </div>
+          </div>
+
+          <div class="ghost-note">MVP 先用微信把这次碰头接住，后续版本再补更多机制。</div>
+
+          <div class="cta-stack">
+            <button class="button">保存二维码</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="login">
+          <div class="topbar">
+            <div class="back-link" id="loginBack">返回</div>
+            <div class="topbar-title">登录小群友</div>
+            <div class="topbar-action">真实登录</div>
+          </div>
+
+          <div class="login-hero">
+            <strong>先登录，再把线下碰头接住</strong>
+            <p>发起组局、报名后查看留言、进入微信群、沉淀真实资料，这些都需要先完成账号登录。MVP 阶段先用微信和手机号两种方式承接。</p>
+          </div>
+
+          <div class="login-stack">
+            <button class="login-option" id="loginWechat">
+              <strong>微信一键登录</strong>
+              <p>最快完成登录，也方便后续用微信群承接时间地点、迟到和临时改动。</p>
+            </button>
+
+            <div class="divider-label">或者</div>
+
+            <button class="login-option" id="loginPhone">
+              <strong>手机号验证码登录</strong>
+              <p>适合先完成账号注册，后续再补微信绑定。第一版先保证能顺利发局和管理参加记录。</p>
+            </button>
+          </div>
+
+          <div class="notes-card section">
+            <strong>为什么这里要登录</strong>
+            <p>小群友的目标不是匿名刷人，而是让附近的人真的能顺利见到。登录是为了把发起人、参与人、留言和微信群关系接起来。</p>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="create">
+          <div class="topbar">
+            <div class="back-link" data-go="home">返回</div>
+            <div class="topbar-title">发起组局</div>
+            <div class="topbar-action">预览</div>
+          </div>
+
+          <div class="hint-card">
+            <strong>尽量少填，先把这局发出去</strong>
+            <p>MVP 默认已经帮你定好：固定 6 人、先留言再进微信群、优先推荐给附近的人。</p>
+          </div>
+
+          <div class="auth-status-card">
+            <strong id="createAuthTitle">已登录账号：万万</strong>
+            <p id="createAuthText">当前使用微信登录。发出去之后，这局会挂在你的个人主页和我的组局里，方便继续承接留言和微信群。</p>
+          </div>
+
+          <div class="input-label">这局叫什么</div>
+          <div class="input-field">比如：二次元同好局 / 西班牙语入门局 / 周末徒步搭子局</div>
+
+          <div class="input-label">你们因为什么认识</div>
+          <div class="chip-row">
+            <button class="chip active">西班牙语</button>
+            <button class="chip">二次元</button>
+            <button class="chip">周末徒步</button>
+            <button class="chip">阅读</button>
+          </div>
+
+          <div class="input-label">什么时候见</div>
+          <div class="chip-row">
+            <button class="chip active">明晚 19:30</button>
+            <button class="chip">周五下班后</button>
+            <button class="chip">周六下午</button>
+          </div>
+          <div class="input-field" style="margin-top: 10px;">也可以改成：周三 19:30 / 周六 15:00</div>
+
+          <div class="input-label">在哪碰头</div>
+          <button class="location-picker" data-auth-go="map-picker">
+            <div>
+              <strong id="selectedPlaceName">Manner 静安店</strong>
+              <p id="selectedPlaceAddress">静安寺地铁站 6 号口步行 180m · 靠窗 6 人长桌</p>
+            </div>
+            <div class="location-action">地图选点</div>
+          </button>
+
+          <div class="input-label">这局更适合谁</div>
+          <div class="chip-row">
+            <button class="chip active">刚搬来</button>
+            <button class="chip active">想轻松认识朋友</button>
+            <button class="chip">下班后有空</button>
+            <button class="chip">第一次参加也行</button>
+          </div>
+
+          <div class="input-label">补一句氛围</div>
+          <div class="chip-field">比如：先聊聊最近为什么开始喜欢这件事。共同兴趣是开始，认识彼此才是后面的事。</div>
+
+          <div class="cta-stack">
+            <button class="button">发出去</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="map-picker">
+          <div class="topbar">
+            <div class="back-link" data-go="create">返回</div>
+            <div class="topbar-title">选择见面地点</div>
+            <div class="topbar-action">地图</div>
+          </div>
+
+          <div class="hint-card">
+            <strong>先选一个附近、好找、能坐下聊的点</strong>
+            <p>第一版先把“大家找得到彼此”放在前面。优先推荐地铁口附近、6 个人能落座、第一次见面不尴尬的咖啡店。</p>
+          </div>
+
+          <div class="map-search">搜索地点 / 商圈 / 地铁站，比如：静安寺、Manner、愚园路</div>
+
+          <div class="map-stage">
+            <div class="map-road one"></div>
+            <div class="map-road two"></div>
+            <div class="map-road three"></div>
+            <div class="map-pin main"><span>选中</span></div>
+            <div class="map-pin alt one"><span></span></div>
+            <div class="map-pin alt two"><span></span></div>
+            <div class="map-float">
+              <strong id="mapSelectedName">Manner 静安店</strong>
+              <span id="mapSelectedAddress">静安寺地铁站 6 号口步行 180m</span>
+            </div>
+          </div>
+
+          <div class="map-summary">
+            <strong>选点建议</strong>
+            <p>离地铁口近、容易报位置、环境不太吵、六个人能连坐。第一场见面越省心，后续复用这套组局方式的概率越高。</p>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <h3>附近可选地点</h3>
+              <span>地图回填</span>
+            </div>
+            <div class="place-list">
+              <button class="place-option active" data-place-name="Manner 静安店" data-place-address="静安寺地铁站 6 号口步行 180m · 靠窗 6 人长桌">
+                <strong>Manner 静安店</strong>
+                <p>静安寺地铁站 6 号口步行 180m · 靠窗 6 人长桌 · 第一次碰头最好找</p>
+              </button>
+              <button class="place-option" data-place-name="Peet's Coffee 愚园路店" data-place-address="愚园路路口步行 240m · 二楼长桌适合 6 人">
+                <strong>Peet's Coffee 愚园路店</strong>
+                <p>愚园路路口步行 240m · 二楼长桌适合 6 人 · 晚上相对安静</p>
+              </button>
+              <button class="place-option" data-place-name="% Arabica 静安嘉里店" data-place-address="静安嘉里中心 L1 · 商场内好定位">
+                <strong>% Arabica 静安嘉里店</strong>
+                <p>静安嘉里中心 L1 · 商场内好定位 · 下雨也方便碰头</p>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="profile">
+          <div class="topbar">
+            <div class="topbar-title">我的</div>
+            <div class="topbar-action">设置</div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-badge">😄</div>
+            <h3>万万</h3>
+            <p>在附近认识同好，把线上认识真的带到线下。</p>
+
+            <div class="stats-grid">
+              <div class="card">
+                <strong>3</strong>
+                <span>发起</span>
+              </div>
+              <div class="card">
+                <strong>8</strong>
+                <span>报名</span>
+              </div>
+              <div class="card">
+                <strong>5</strong>
+                <span>参与</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="group-card" data-go="edit-profile">
+              <strong>个人资料</strong>
+              <p>维护昵称、头像、自我介绍和想认识什么样的人。</p>
+            </div>
+            <div class="group-card" data-go="my-groups">
+              <strong>我的组局</strong>
+              <p>查看你发起的和报名的小局，以及当前最基础的组局状态。</p>
+            </div>
+            <div class="group-card">
+              <strong>消息</strong>
+              <p>先聚焦留言和活动即时沟通。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="my-groups">
+          <div class="topbar">
+            <div class="back-link" data-go="profile">返回</div>
+            <div class="topbar-title">我的组局</div>
+            <div class="topbar-action">筛选</div>
+          </div>
+
+          <div class="hint-card">
+            <strong>最近参与了 5 个组局</strong>
+            <p>这版先只保留 3 种组局状态：招募中、已组满、已取消（预留）。先别把状态系统做重。</p>
+          </div>
+
+          <div class="section">
+            <div class="group-card">
+              <strong>周五西班牙语入门局</strong>
+              <p>我发起 · 4/6 人</p>
+              <div class="group-meta">
+                <span class="meta-pill organizer">我是组织者</span>
+                <span class="meta-pill">招募中</span>
+              </div>
+            </div>
+            <div class="group-card" data-go="detail">
+              <strong>西班牙语入门局</strong>
+              <p>我报名 · 4/6 人</p>
+              <div class="group-meta">
+                <span class="meta-pill participant">我是参与者</span>
+                <span class="meta-pill">招募中</span>
+              </div>
+            </div>
+            <div class="group-card">
+              <strong>二次元同好局</strong>
+              <p>我报名 · 2/6 人</p>
+              <div class="group-meta">
+                <span class="meta-pill participant">我是参与者</span>
+                <span class="meta-pill">招募中</span>
+              </div>
+            </div>
+            <div class="group-card">
+              <strong>周末附近徒步搭子局</strong>
+              <p>我报名 · 6/6 人</p>
+              <div class="group-meta">
+                <span class="meta-pill participant">我是参与者</span>
+                <span class="meta-pill">已组满</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="member">
+          <div class="topbar">
+            <div class="back-link" id="memberBack">返回</div>
+            <div class="topbar-title">成员主页</div>
+            <div class="topbar-action">资料</div>
+          </div>
+
+          <div class="member-hero">
+            <div class="member-avatar" id="memberAvatar">😊</div>
+            <div>
+              <h3 id="memberName">小明</h3>
+              <div class="member-role-line"><span class="role-badge organizer" id="memberRoleBadge">组织者</span></div>
+              <p class="member-identity-note" id="memberIdentityNote">这局由 TA 发起，会负责补充时间地点和集合信息。</p>
+              <p id="memberBio">刚搬来附近，想认识几个之后还会再约的朋友。</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="card">
+              <strong style="display:block; margin-bottom:8px;">这次为什么来</strong>
+              <p id="memberReason" style="margin:0; color:var(--muted); font-size:14px; line-height:1.7;">
+                想先从一场很轻的小局开始，认识附近的人。
+              </p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="group-meta" id="memberTags">
+              <span class="tag">刚搬来</span>
+              <span class="tag">线下碰头</span>
+              <span class="tag">第一次参加也行</span>
+            </div>
+          </div>
+
+          <div class="member-section member-facts">
+            <div class="card">
+              <span>年龄</span>
+              <strong id="memberAge">27</strong>
+            </div>
+            <div class="card">
+              <span>毕业院校</span>
+              <strong id="memberSchool">复旦大学</strong>
+            </div>
+            <div class="card">
+              <span>所在区域</span>
+              <strong id="memberArea">静安寺附近</strong>
+            </div>
+            <div class="card">
+              <span>参加节奏</span>
+              <strong id="memberPace">下班后更方便</strong>
+            </div>
+            <div class="card">
+              <span>公司</span>
+              <strong id="memberCompany">小红书</strong>
+            </div>
+            <div class="card">
+              <span>岗位</span>
+              <strong id="memberRole">产品经理</strong>
+            </div>
+          </div>
+
+          <div class="member-section card">
+            <strong>想认识什么样的人</strong>
+            <p id="memberLookingFor" style="margin:0; color:var(--muted); font-size:14px; line-height:1.7;">
+              想认识住得不远、之后还可能继续约的人，最好第一次见面也比较轻松。
+            </p>
+          </div>
+
+          <div class="member-section card">
+            <strong>这次来之前想说</strong>
+            <p id="memberNote" style="margin:0; color:var(--muted); font-size:14px; line-height:1.7;">
+              第一次见面不用有压力，能把名字记住、聊起来就已经很好了。
+            </p>
+          </div>
+
+          <div class="member-section card">
+            <strong id="memberPrompt">我最想打破的标签是什么？</strong>
+            <p id="memberPromptAnswer" style="margin:0; color:var(--muted); font-size:14px; line-height:1.7;">
+              想打破“工作稳定的人就不会主动认识新朋友”这个标签。其实我只是缺一个自然开始的机会。
+            </p>
+          </div>
+
+          <div class="notes-card">
+            <strong>在 MVP 里先展示这些就够了</strong>
+            <p>让用户在报名前知道“这个人是谁、为什么会来、会不会聊得来”。真实信息和一个问题回答，会比空泛介绍更容易建立信任。</p>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="edit-profile">
+          <div class="topbar">
+            <div class="back-link" data-go="profile">返回</div>
+            <div class="topbar-title">个人资料</div>
+            <div class="topbar-action">保存</div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-badge">😄</div>
+            <h3>万万</h3>
+            <p>让别人决定要不要报名你的局之前，先知道你是谁。</p>
+          </div>
+
+          <div class="hint-card section">
+            <strong>真实信息，真诚交往</strong>
+            <p>建议填写真实年龄、学校、公司和岗位。小群友更想做的是靠谱地认识附近的人，而不是靠模糊包装吸引报名。</p>
+          </div>
+
+          <div class="notes-card section">
+            <strong>资料规则先轻一点</strong>
+            <p>这版不做很重的门槛。先把最基础的 4 项填上就可以正常发局，其他资料用来慢慢补信任感，不想一次填太多也没关系。</p>
+          </div>
+
+          <div class="section form-group">
+            <div class="group-intro">
+              <strong><span class="group-pill required">先填</span> 先把这局发出去</strong>
+              <p>第一版先填这 4 项就够用：昵称、年龄、一句自我介绍、常活动区域。填完就能正常发局，不做重门槛。</p>
+            </div>
+            <div class="edit-profile-stack">
+              <div class="card">
+                <div class="field-head">
+                  <strong>昵称</strong>
+                  <span>公开显示</span>
+                </div>
+                <div class="input-field">万万</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>年龄</strong>
+                  <span>建议真实填写</span>
+                </div>
+                <div class="input-field">27</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>一句自我介绍</strong>
+                  <span>最先被看到</span>
+                </div>
+                <div class="input-field">在附近认识同好，把线上认识真的带到线下。</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>常活动区域</strong>
+                  <span>方便推荐附近的人</span>
+                </div>
+                <div class="input-field">静安寺 / 昌平路 / 南京西路</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section form-group">
+            <div class="group-intro">
+              <strong><span class="group-pill recommended">推荐补充</span> 让人更愿意报名你</strong>
+              <p>这部分不是硬性要求，但会明显提升可信度和可聊度。建议发出第一场局之后，慢慢把这里补完整。</p>
+            </div>
+            <div class="edit-profile-stack">
+              <div class="card">
+                <div class="field-head">
+                  <strong>毕业院校</strong>
+                  <span>帮助建立信任</span>
+                </div>
+                <div class="input-field">复旦大学</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>公司</strong>
+                  <span>建议真实填写</span>
+                </div>
+                <div class="input-field">小红书</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>工作岗位</strong>
+                  <span>一句就够</span>
+                </div>
+                <div class="input-field">产品经理</div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>选一个问题回答</strong>
+                  <span>让别人更快认识你</span>
+                </div>
+                <div class="chip-row">
+                  <button class="chip active">我最想打破的标签是什么？</button>
+                  <button class="chip">如果明天是世界末日，今天我想做什么？</button>
+                  <button class="chip">最近一次让我重新认识自己的时刻是什么？</button>
+                </div>
+                <div class="input-field" style="margin-top: 10px;">
+                  想打破“工作稳定的人就不会主动认识新朋友”这个标签。其实我只是缺一个自然开始的机会。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section form-group">
+            <div class="group-intro">
+              <strong><span class="group-pill optional">慢慢补</span> 再补性格和偏好</strong>
+              <p>这些不影响第一版建立信任，也不会阻塞发局。更像是你用了一阵之后，再补上的个人偏好信息。</p>
+            </div>
+            <div class="edit-profile-stack">
+              <div class="card">
+                <div class="field-head">
+                  <strong>想认识什么样的人</strong>
+                  <span>可直接选择</span>
+                </div>
+                <div class="chip-row">
+                  <button class="chip active">刚搬来</button>
+                  <button class="chip active">想轻松认识朋友</button>
+                  <button class="chip">下班后有空</button>
+                  <button class="chip">第一次参加也行</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>我的兴趣</strong>
+                  <span>帮助被推荐</span>
+                </div>
+              <div class="chip-row">
+                <button class="chip active">西班牙语</button>
+                <button class="chip active">二次元</button>
+                <button class="chip">周末徒步</button>
+                <button class="chip">附近散步</button>
+              </div>
+            </div>
+
+              <div class="card">
+                <div class="field-head">
+                  <strong>我的状态</strong>
+                  <span>选一个最像你的</span>
+                </div>
+              <div class="chip-row">
+                <button class="chip active">想先从共同兴趣认识人</button>
+                <button class="chip">想找固定周末搭子</button>
+                <button class="chip">先从一场小局开始</button>
+              </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="cta-stack">
+            <button class="button">保存资料</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="scope">
+          <div class="topbar">
+            <div class="back-link" data-go="home">返回</div>
+            <div class="topbar-title">MVP范围</div>
+            <div class="topbar-action">试水</div>
+          </div>
+
+          <div class="scope-card">
+            <strong style="display:block; margin-bottom:10px; font-size:18px;">这版先验证 3 件事</strong>
+            <ul>
+              <li>有没有人愿意发起固定 6 人的小局</li>
+              <li>看到的人愿不愿意报名这种轻量线下碰头</li>
+              <li>留言加微信群，能不能把第一次碰头顺利接住</li>
+            </ul>
+          </div>
+
+          <div class="notes-card">
+            <strong>所以这版先停在这里</strong>
+            <p>发起、浏览、报名、留言、微信群协调。先别把完成状态、复盘、再约这些机制一次做太重。</p>
+          </div>
+        </section>
+
+        <div class="tabbar">
+          <button class="tab active" data-tab="home">首页</button>
+          <button class="tab" data-tab="profile">我的</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="panel notes">
+      <h2 class="notes-title">Prototype Notes</h2>
+      <div class="notes-card">
+        <strong>这是什么</strong>
+        <p>一个可直接打开的高保真静态原型，没有依赖安装成本，适合先拿来对方向、讲故事、继续迭代文案。</p>
+      </div>
+      <div class="notes-card">
+        <strong>现在可点的路径</strong>
+        <ul>
+          <li>首页 → 附近组局 → 组局详情 → 报名成功 → 组局留言</li>
+          <li>组局详情 / 留言里的成员 → 成员主页</li>
+          <li>首页 → 登录 → 发起组局 → 地图选点</li>
+          <li>首页 / 标签栏 → 登录 → 我的 → 个人资料 / 我的组局</li>
+          <li>首页右上角 → MVP范围</li>
+        </ul>
+      </div>
+      <div class="notes-card">
+        <strong>下一步最值得补的</strong>
+        <ul>
+          <li>接入真实地图 SDK、定位权限和 POI 搜索</li>
+          <li>真正的多屏转场和动效</li>
+          <li>邀请码、登录态持久化、活动安全提示</li>
+          <li>把这版转成 React / Vite 项目</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const screens = [
+      { id: "home", label: "首页", desc: "品牌入口和双主路径" },
+      { id: "nearby", label: "附近组局", desc: "浏览附近正在组人的小局" },
+      { id: "detail", label: "组局详情", desc: "看这局适合谁、当前人数和介绍" },
+      { id: "signup-success", label: "报名成功", desc: "承接加入后的下一步动作" },
+      { id: "comments", label: "组局留言", desc: "活动前的小规模协调和微信群入口" },
+      { id: "login", label: "登录", desc: "先完成账号登录，再进入发起和管理" },
+      { id: "create", label: "发起组局", desc: "低交互发布，一切尽量少填" },
+      { id: "map-picker", label: "地图选点", desc: "从地图和 POI 列表里选见面地点" },
+      { id: "profile", label: "我的", desc: "查看个人入口和基础数据" },
+      { id: "edit-profile", label: "个人资料", desc: "维护头像、昵称和自我介绍" },
+      { id: "my-groups", label: "我的组局", desc: "发起和报名列表" },
+      { id: "member", label: "成员主页", desc: "查看已报名成员的基础资料" },
+      { id: "scope", label: "MVP范围", desc: "说明第一版先验证什么" }
+    ];
+
+    const screenList = document.getElementById("screenList");
+    const screenMap = new Map();
+
+    screens.forEach((screen) => {
+      const button = document.createElement("button");
+      button.className = "screen-link";
+      button.dataset.target = screen.id;
+      button.innerHTML = `<strong>${screen.label}</strong><span>${screen.desc}</span>`;
+      button.addEventListener("click", () => setScreen(screen.id));
+      screenList.appendChild(button);
+      screenMap.set(screen.id, button);
+    });
+
+    const screenNodes = document.querySelectorAll(".screen");
+    const tabNodes = document.querySelectorAll(".tab");
+    let previousScreen = "home";
+    let isLoggedIn = false;
+    let loginMethod = "微信";
+    let pendingScreen = "create";
+    const protectedScreens = new Set(["signup-success", "comments", "create", "map-picker", "profile", "edit-profile", "my-groups"]);
+    const selectedPlace = {
+      name: "Manner 静安店",
+      address: "静安寺地铁站 6 号口步行 180m · 靠窗 6 人长桌"
+    };
+
+    const members = {
+      xiaoming: {
+        name: "小明",
+        identityRole: "organizer",
+        identityLabel: "组织者",
+        identityNote: "这局由 TA 发起，会负责补充时间地点和集合信息。",
+        avatar: "😊",
+        avatarClass: "",
+        bio: "在静安上班，最近想找几个也对西班牙语有兴趣的人，从很轻松的方式开始认识。",
+        reason: "我发这局是因为共同兴趣比纯聊天更自然，咖啡只是开始，不是全部主题。",
+        tags: ["组织者", "西班牙语", "下班后", "先聊再学"],
+        age: "29",
+        school: "上海交通大学",
+        area: "静安寺附近",
+        pace: "工作日晚上更方便",
+        company: "字节跳动",
+        jobTitle: "商业化产品经理",
+        lookingFor: "想认识住得不远、也愿意因为一个共同兴趣慢慢熟起来的人，第一次见面轻一点最好。",
+        note: "不用真的会很多西语，愿意带着一点兴趣来就够了。我更在意的是大家真的愿意出来碰头。",
+        prompt: "我最想打破的标签是什么？",
+        promptAnswer: "想打破“发起局的人一定很会带气氛”这个标签。其实我也会紧张，只是愿意先迈出那一步。"
+      },
+      ahua: {
+        name: "阿花",
+        identityRole: "participant",
+        identityLabel: "参与者",
+        identityNote: "TA 通过报名加入这局，先因为共同兴趣来认识大家。",
+        avatar: "👩",
+        avatarClass: "alt",
+        bio: "刚搬来附近两周，希望因为一点具体兴趣认识几个人，而不是一上来就纯社交。",
+        reason: "第一次参加这种 6 人局，感觉有西班牙语这个话题会轻松很多，不会一下子太空。",
+        tags: ["刚搬来", "西班牙语零基础", "轻松聊天"],
+        age: "26",
+        school: "华东师范大学",
+        area: "昌平路附近",
+        pace: "下班后和周末都可以",
+        company: "IDEO",
+        jobTitle: "服务设计师",
+        lookingFor: "想认识在附近生活的人，最好不是只见一次就散掉，之后还能因为别的兴趣继续约。",
+        note: "如果大家聊得来，我会更想继续约散步、吃饭或者一起练一点简单西语这种没压力的局。",
+        prompt: "如果明天是世界末日，今天我想做什么？",
+        promptAnswer: "我会约几个真正想见的人喝一杯，认真聊一晚，而不是把时间花在无意义的刷屏上。"
+      },
+      kevin: {
+        name: "Kevin",
+        identityRole: "participant",
+        identityLabel: "参与者",
+        identityNote: "TA 通过报名加入这局，先因为共同兴趣来认识大家。",
+        avatar: "🧑",
+        avatarClass: "pink",
+        bio: "住在附近，平时喜欢先因为一个具体话题坐下来，不太喜欢毫无来由的硬社交。",
+        reason: "我更在意人能不能真的聊起来，所以先因为共同兴趣见一面，对我来说比纯破冰更自然。",
+        tags: ["固定 6 人", "不想硬社交", "共同兴趣局"],
+        age: "31",
+        school: "同济大学",
+        area: "南京西路附近",
+        pace: "周中下班后更常出现",
+        company: "Nike",
+        jobTitle: "品牌策略",
+        lookingFor: "想认识不端着、好说话的人。最好先有个共同话题，之后再决定要不要继续约。",
+        note: "我不太喜欢目的感太强的局，所以这种先因为兴趣坐下来喝一杯的方式比较适合我。",
+        prompt: "最近一次让我重新认识自己的时刻是什么？",
+        promptAnswer: "是我发现自己其实并不排斥社交，我只是排斥那种目标感太强、让人必须表现得很厉害的场合。"
+      },
+      linlin: {
+        name: "林林",
+        identityRole: "participant",
+        identityLabel: "参与者",
+        identityNote: "TA 通过报名加入这局，先因为共同兴趣来认识大家。",
+        avatar: "🙂",
+        avatarClass: "",
+        bio: "在附近租房，周中有空，想慢慢把陌生城市过成熟人城市，也想找到能一起周末徒步的人。",
+        reason: "先因为共同兴趣见几个人、记住名字，比一口气进很多群更适合我。",
+        tags: ["周末徒步", "附近租房", "想慢慢熟起来"],
+        age: "28",
+        school: "浙江大学",
+        area: "江宁路附近",
+        pace: "周中晚上比较稳定",
+        company: "腾讯",
+        jobTitle: "用户研究员",
+        lookingFor: "想认识住得近、平时也会在附近活动的人，这样以后更容易继续见到，也更容易一起约别的兴趣局。",
+        note: "我会更在意氛围是不是自然，不用很会说，真诚一点、有共同话题就很好。",
+        prompt: "我最想打破的标签是什么？",
+        promptAnswer: "想打破“慢热的人就不适合认识新朋友”这个标签。其实我只是需要一个自然一点的开始。"
+      }
+    };
+
+    function renderAuthState() {
+      const homeAuthNote = document.getElementById("homeAuthNote");
+      const createAuthTitle = document.getElementById("createAuthTitle");
+      const createAuthText = document.getElementById("createAuthText");
+
+      if (homeAuthNote) {
+        homeAuthNote.textContent = isLoggedIn
+          ? `已用${loginMethod}登录，可直接发起组局、维护个人资料和继续承接留言。`
+          : "登录后可发起组局、维护个人资料，也方便后续承接留言和微信群。";
+      }
+
+      if (createAuthTitle) {
+        createAuthTitle.textContent = isLoggedIn ? `已登录账号：万万` : "登录后才能发起这局";
+      }
+
+      if (createAuthText) {
+        createAuthText.textContent = isLoggedIn
+          ? `当前使用${loginMethod}登录。发出去之后，这局会挂在你的个人主页和我的组局里，方便继续承接留言和微信群。`
+          : "这局需要挂在真实账号下，方便后续管理报名、留言和微信群入口。";
+      }
+    }
+
+    function renderSelectedPlace() {
+      const createName = document.getElementById("selectedPlaceName");
+      const createAddress = document.getElementById("selectedPlaceAddress");
+      const mapName = document.getElementById("mapSelectedName");
+      const mapAddress = document.getElementById("mapSelectedAddress");
+
+      if (createName) createName.textContent = selectedPlace.name;
+      if (createAddress) createAddress.textContent = selectedPlace.address;
+      if (mapName) mapName.textContent = selectedPlace.name;
+      if (mapAddress) mapAddress.textContent = selectedPlace.address.split(" · ")[0];
+
+      document.querySelectorAll("[data-place-name]").forEach((node) => {
+        const isActive = node.dataset.placeName === selectedPlace.name;
+        node.classList.toggle("active", isActive);
+      });
+    }
+
+    function completeLogin(method) {
+      isLoggedIn = true;
+      loginMethod = method;
+      renderAuthState();
+      setScreen(pendingScreen || "create");
+    }
+
+    function setScreen(id) {
+      if (protectedScreens.has(id) && !isLoggedIn) {
+        pendingScreen = id;
+        id = "login";
+      }
+
+      if (!["member", "login", "map-picker"].includes(id)) {
+        previousScreen = id;
+      }
+      screenNodes.forEach((node) => {
+        node.classList.toggle("active", node.dataset.screen === id);
+      });
+
+      screenMap.forEach((button, key) => {
+        button.classList.toggle("active", key === id);
+      });
+
+      tabNodes.forEach((tab) => {
+        const isActive = (tab.dataset.tab === "home" && ["home", "nearby", "detail", "signup-success", "comments", "create", "scope", "member", "login", "map-picker"].includes(id))
+          || (tab.dataset.tab === "profile" && ["profile", "my-groups", "edit-profile"].includes(id));
+        tab.classList.toggle("active", isActive);
+      });
+    }
+
+    function openMember(id) {
+      const member = members[id];
+      if (!member) return;
+      document.getElementById("memberName").textContent = member.name;
+      document.getElementById("memberBio").textContent = member.bio;
+      document.getElementById("memberReason").textContent = member.reason;
+
+      const avatar = document.getElementById("memberAvatar");
+      avatar.textContent = member.avatar;
+      avatar.className = `member-avatar ${member.avatarClass || ""}`.trim();
+
+      const roleBadge = document.getElementById("memberRoleBadge");
+      roleBadge.textContent = member.identityLabel;
+      roleBadge.className = `role-badge ${member.identityRole}`.trim();
+      document.getElementById("memberIdentityNote").textContent = member.identityNote;
+
+      const tagWrap = document.getElementById("memberTags");
+      tagWrap.innerHTML = member.tags.map((tag) => `<span class="tag">${tag}</span>`).join("");
+      document.getElementById("memberAge").textContent = member.age;
+      document.getElementById("memberSchool").textContent = member.school;
+      document.getElementById("memberArea").textContent = member.area;
+      document.getElementById("memberPace").textContent = member.pace;
+      document.getElementById("memberCompany").textContent = member.company;
+      document.getElementById("memberRole").textContent = member.jobTitle;
+      document.getElementById("memberLookingFor").textContent = member.lookingFor;
+      document.getElementById("memberNote").textContent = member.note;
+      document.getElementById("memberPrompt").textContent = member.prompt;
+      document.getElementById("memberPromptAnswer").textContent = member.promptAnswer;
+
+      setScreen("member");
+    }
+
+    document.querySelectorAll("[data-go]").forEach((node) => {
+      node.addEventListener("click", () => setScreen(node.dataset.go));
+    });
+
+    document.querySelectorAll("[data-auth-go]").forEach((node) => {
+      node.addEventListener("click", () => setScreen(node.dataset.authGo));
+    });
+
+    document.querySelectorAll("[data-member]").forEach((node) => {
+      node.addEventListener("click", () => openMember(node.dataset.member));
+    });
+
+    document.getElementById("memberBack").addEventListener("click", () => setScreen(previousScreen || "detail"));
+    document.getElementById("loginBack").addEventListener("click", () => setScreen(previousScreen || "home"));
+    document.getElementById("loginWechat").addEventListener("click", () => completeLogin("微信"));
+    document.getElementById("loginPhone").addEventListener("click", () => completeLogin("手机号"));
+
+    document.querySelectorAll("[data-place-name]").forEach((node) => {
+      node.addEventListener("click", () => {
+        selectedPlace.name = node.dataset.placeName;
+        selectedPlace.address = node.dataset.placeAddress;
+        renderSelectedPlace();
+        setScreen("create");
+      });
+    });
+
+    tabNodes.forEach((tab) => {
+      tab.addEventListener("click", () => setScreen(tab.dataset.tab));
+    });
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const row = chip.parentElement;
+        const singleSelect = row.querySelectorAll(".chip.active").length >= 1 && row.previousElementSibling && row.previousElementSibling.className === "input-label";
+        if (singleSelect && row.children.length <= 4 && row === chip.parentElement && row.parentElement.querySelector(".input-label")) {
+          const siblings = Array.from(row.children);
+          const isExclusiveRow = siblings.every((node) => node.classList.contains("chip"));
+          if (isExclusiveRow && ["什么时候见", "这局从什么开始"].includes(row.previousElementSibling?.textContent || "")) {
+            siblings.forEach((node) => node.classList.remove("active"));
+            chip.classList.add("active");
+            return;
+          }
+        }
+        chip.classList.toggle("active");
+      });
+    });
+
+    renderAuthState();
+    renderSelectedPlace();
+    setScreen("home");
+  </script>
+</body>
+</html>

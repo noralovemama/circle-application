@@ -105,6 +105,7 @@
                 "desc" : "你的位置信息将用于选择圈子活动地点"
             }
         },
+        "requiredPrivateInfos" : [ "getLocation", "chooseLocation" ],
         "uniStatistics" : {
             "enable" : true
         }

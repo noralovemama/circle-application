@@ -1,17 +1,45 @@
 import config from './config'
 import { findMockFunction } from './mock'
-import store from '@/store'
+import { getResponseStatus } from '@/utils/response'
 
 const AUTH_FREE_URLS = ['token/login', 'code/send', 'token/refresh']
 
 const normalizeUrl = (url = '') => String(url).replace(/^\/+/, '').split('?')[0]
 
-const shouldAttachUserToken = (url = '') => !AUTH_FREE_URLS.includes(normalizeUrl(url))
+const shouldAttachUserToken = (url = '') => AUTH_FREE_URLS.indexOf(normalizeUrl(url)) === -1
 
 const getErrorMessage = (error, fallback = '网络请求失败') => {
   if (!error) return fallback
   if (typeof error === 'string') return error
   return error.message || error.errMsg || error.msg || fallback
+}
+
+const sanitizeLogData = (value) => {
+  if (!value || typeof value !== 'object') return value
+  const result = Array.isArray(value) ? [] : {}
+  Object.keys(value).forEach((key) => {
+    const item = value[key]
+    if (typeof item === 'string' && (key.toLowerCase().indexOf('image') !== -1 || item.indexOf('data:image/') === 0)) {
+      result[key] = `[image:${item.length}]`
+    } else if (item && typeof item === 'object') {
+      result[key] = sanitizeLogData(item)
+    } else {
+      result[key] = item
+    }
+  })
+  return result
+}
+
+const normalizeResponseData = (data) => {
+  if (!data || typeof data !== 'object') return data
+  const normalizedStatus = getResponseStatus(data)
+  if (normalizedStatus !== undefined) {
+    data.status = normalizedStatus
+  }
+  if ((data.message === undefined || data.message === null || data.message === '') && data.msg) {
+    data.message = data.msg
+  }
+  return data
 }
 
 const requestByCallback = (requestOptions, requestStartTime) => {
@@ -28,9 +56,9 @@ const requestByCallback = (requestOptions, requestStartTime) => {
         console.log('[Request] success:', {
           url: requestOptions.url,
           duration: Date.now() - requestStartTime,
-          statusCode: response?.statusCode,
-          dataStatus: response?.data?.status ?? response?.data?.code,
-          dataMessage: response?.data?.message || response?.data?.msg || ''
+          statusCode: response && response.statusCode,
+          dataStatus: response && response.data ? (response.data.status !== undefined ? response.data.status : response.data.code) : undefined,
+          dataMessage: (response && response.data && (response.data.message || response.data.msg)) || ''
         })
         resolve(response)
       },
@@ -39,9 +67,9 @@ const requestByCallback = (requestOptions, requestStartTime) => {
         console.error('[Request] fail:', {
           url: requestOptions.url,
           duration: Date.now() - requestStartTime,
-          errMsg: error?.errMsg,
-          message: error?.message,
-          code: error?.code
+          errMsg: error && error.errMsg,
+          message: error && error.message,
+          code: error && error.code
         })
         reject(error)
       },
@@ -49,8 +77,8 @@ const requestByCallback = (requestOptions, requestStartTime) => {
         console.log('[Request] complete:', {
           url: requestOptions.url,
           duration: Date.now() - requestStartTime,
-          errMsg: result?.errMsg,
-          statusCode: result?.statusCode
+          errMsg: result && result.errMsg,
+          statusCode: result && result.statusCode
         })
       }
     })
@@ -74,7 +102,7 @@ const requestByCallback = (requestOptions, requestStartTime) => {
 const request = async (options) => {
   const { url, method = 'GET', data, mock = false, timeout } = options
 
-  console.log('[Request] 开始请求:', { url, method, data, mock })
+  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock })
 
   // 强制开启 mock
   if (mock) {
@@ -89,7 +117,7 @@ const request = async (options) => {
         throw new Error('返回数据格式错误')
       }
 
-      return result
+      return normalizeResponseData(result)
     } catch (error) {
       console.error('[Mock] 处理错误:', error)
       throw error
@@ -100,18 +128,22 @@ const request = async (options) => {
   const requestStartTime = Date.now()
   try {
     const token = uni.getStorageSync('token') || ''
+    const openId = uni.getStorageSync('openId') || token
     const expireAt = uni.getStorageSync('expireAt') || ''
-    const attachUserToken = shouldAttachUserToken(url) && !!token
+    const attachUserToken = shouldAttachUserToken(url) && !!openId
+    const header = {
+      'Content-Type': 'application/json'
+    }
+    if (attachUserToken) {
+      header['User-Token'] = JSON.stringify({ openId, expireAt })
+    }
     const requestOptions = {
       url: `${config.baseUrl}${url}`,
       method,
       data,
       timeout: timeout || config.timeout,
       dataType: 'json',
-      header: {
-        'Content-Type': 'application/json',
-        ...(attachUserToken && { 'User-Token': JSON.stringify({ openId: token, expireAt }) }),
-      }
+      header
     }
 
     console.log('[Request] 实际请求:', {
@@ -120,11 +152,20 @@ const request = async (options) => {
       timeout: requestOptions.timeout,
       dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
       attachUserToken,
-      tokenTail: token ? `****${String(token).slice(-4)}` : ''
+      tokenTail: openId ? `****${String(openId).slice(-4)}` : ''
     })
 
     const response = await requestByCallback(requestOptions, requestStartTime)
-    const { status, message, msg } = response?.data || {}
+    if (!response || response.statusCode < 200 || response.statusCode >= 300) {
+      throw new Error((response && response.data && (response.data.message || response.data.msg)) || `HTTP ${response && response.statusCode}`)
+    }
+
+    if (!response.data) {
+      throw new Error('接口返回为空')
+    }
+
+    const responseData = normalizeResponseData(response.data)
+    const { status, message, msg } = responseData
     if (status == 10002) {
       uni.redirectTo({
         url: '/pages/login/login'
@@ -133,7 +174,7 @@ const request = async (options) => {
     } else if (status == 10001) {
       throw new Error(message || msg || '请求失败')
     }
-    return response.data
+    return responseData
   } catch (error) {
     console.error('[Request] 请求错误:', {
       url: `${config.baseUrl}${url}`,
@@ -144,19 +185,6 @@ const request = async (options) => {
     })
     throw new Error(getErrorMessage(error))
   }
-}
-
-// 响应拦截器
-const responseInterceptor = (response) => {
-  if (response.statusCode === 401) {
-    // token 失效，清除用户信息
-    store.commit('user/CLEAR_USER_INFO')
-    uni.redirectTo({
-      url: '/pages/login/login'
-    })
-    return Promise.reject(new Error('登录已过期'))
-  }
-  return response
 }
 
 export default request

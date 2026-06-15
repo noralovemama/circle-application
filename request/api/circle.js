@@ -1,4 +1,5 @@
 import request from '../request'
+import { toSubmittableImageBase64 } from '@/utils/image'
 
 function combineDateTimeToTimestamp(activityDate, activityTime) {
     // 组合日期和时间，精确到秒
@@ -8,6 +9,15 @@ function combineDateTimeToTimestamp(activityDate, activityTime) {
     // 获取时间戳
     const timestamp = date.getTime()/1000;
     return timestamp;
+}
+
+function sanitizeImageLog(data) {
+  if (!data || typeof data !== 'object') return data
+  return {
+    ...data,
+    ownerImage: data.ownerImage ? `[base64:${String(data.ownerImage).length}]` : data.ownerImage,
+    userImage: data.userImage ? `[base64:${String(data.userImage).length}]` : data.userImage
+  }
 }
 
 
@@ -25,14 +35,13 @@ export default {
 
   // 获取圈子详情
   getCircleDetail: (circleId, userId, longitude, latitude) => {
-    console.log('[API] 请求圈子详情:', params)
-	
 	let params = {
 		circleId,
 		longitude,
 		latitude,
 		userId
 	}
+    console.log('[API] 请求圈子详情:', params)
     return request({
       url: 'circle/detail',
       method: 'GET',
@@ -42,8 +51,8 @@ export default {
   },
 
   // 创建圈子
-  createCircle: (data, ownerId, ownerName) => {
-    console.log('[API] 创建圈子:', data)
+  createCircle: (data = {}, ownerId, ownerName) => {
+    console.log('[API] 创建圈子:', sanitizeImageLog(data))
 	const {
 		circleName,
 		topic,
@@ -70,7 +79,7 @@ export default {
 		slogan,
 		topic,
 		ownerName,
-		ownerImage,
+		ownerImage: toSubmittableImageBase64(ownerImage),
 		money: parseInt(money) || 0
 	}
     return request({
@@ -82,8 +91,8 @@ export default {
   },
 
   // 更新圈子
-  updateCircle: (data) => {
-    console.log('[API] 更新圈子:', data)
+  updateCircle: (data = {}) => {
+    console.log('[API] 更新圈子:', sanitizeImageLog(data))
 	const {
 		circleName,
 		topic,
@@ -100,7 +109,6 @@ export default {
 		ownerName,
 		ownerImage
 	} = data
-	const dateStr = data.activityDate + " " + data.activityTime + ":00"
 	const activityTimeDate = combineDateTimeToTimestamp(activityDate, activityTime)
 	let params  = {
 		circleId,
@@ -115,7 +123,7 @@ export default {
 		money: parseInt(money) || 0,
 		ownerId,
 		ownerName,
-		ownerImage
+		ownerImage: toSubmittableImageBase64(ownerImage)
 	}
 	
     return request({
@@ -137,13 +145,20 @@ export default {
   },
 
   // 圈子留言操作（创建/编辑/删除）
-  updateCircleMessage: (data) => {
-    console.log('[API] 圈子留言操作:', data)
+  updateCircleMessage: (data = {}) => {
+    const payload = {
+      ...data,
+      userImage: toSubmittableImageBase64(data.userImage)
+    }
+    console.log('[API] 圈子留言操作:', {
+      ...payload,
+      userImage: payload.userImage ? `[base64:${String(payload.userImage).length}]` : ''
+    })
     return request({
       url: 'circle/message',
       method: 'POST',
-      data,
+      data: payload,
       mock: false
     })
   }
-} 
+}

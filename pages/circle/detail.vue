@@ -5,22 +5,22 @@
 			<view class="left-btn" @click="goBack">返回</view>
 			<text class="header-title">{{ circle.circleName }}</text>
 			<view class="user-icon" @click="navigateToUser">
-				<image class="avatar" :src="ownerInfo?.image" mode="aspectFill"></image>
+				<image class="avatar" :src="ownerAvatar" mode="aspectFill"></image>
 			</view>
 		</view>
 
 		<!-- 圈子信息 -->
 		<view class="circle-info">
 			<!-- 创建人和加入按钮 -->
-			<view class="circle-header">
-				<text class="creator-text">{{ circle.ownerName }}想和大家一起</text>
-				<button class="action-btn"
-					:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': circle.joinStatus === 1, 'disabled': isActivityStarted || isFull }"
-					@click="handleAction"
-					:disabled="isActivityStarted || isFull">
-					{{ buttonText }}
-				</button>
-			</view>
+				<view class="circle-header">
+					<text class="creator-text">{{ circle.ownerName }}想和大家一起</text>
+					<button class="action-btn"
+						:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': isParticipant, 'disabled': isActionDisabled }"
+						@click="handleAction"
+						:disabled="isActionDisabled">
+						{{ buttonText }}
+					</button>
+				</view>
 
 			<!-- 活动详情卡片 -->
 			<view class="activity-card">
@@ -28,7 +28,7 @@
 				<view class="activity-info">
 					<view class="info-item">
 						<text class="info-icon">💰</text>
-						<text class="info-text">{{ formatBudget(circle.budget) }}</text>
+						<text class="info-text">{{ formatBudget(circle.budget || circle.money) }}</text>
 					</view>
 					<view class="info-item">
 						<text class="info-icon">👥</text>
@@ -58,15 +58,15 @@
 		</view>
 
 		<!-- 成员列表 -->
-		<view class="members-section" v-if="circle.circleUserItemList?.length">
+		<view class="members-section" v-if="memberList.length">
 			<view class="section-title">圈子成员</view>
 			<view class="members-list">
-				<view class="member-item" v-for="member in circle.circleUserItemList" :key="member.userId">
+				<view class="member-item" v-for="member in memberList" :key="member.userId">
 					<image :src="getAvatar(member)" class="member-avatar" mode="aspectFill"></image>
 					<view class="member-info">
 						<view class="member-header">
 							<text class="member-name">{{ member.userName }}</text>
-							<text class="member-tag" v-if="member.ownerFlag === 1">圈主</text>
+							<text class="member-tag" v-if="isOwnerMember(member)">圈主</text>
 						</view>
 						<view class="member-content">
 								<text class="member-content-text">{{memberBasicText(member)}}</text>
@@ -91,11 +91,11 @@
 
 			<view class="comments-list">
 				<view class="comment-item" v-for="comment in getComments()" :key="comment.messageId">
-					<image :src="comment.userImage || '/static/default-avatar.png'" class="comment-avatar" mode="aspectFill"></image>
+					<image :src="getCommentAvatar(comment)" class="comment-avatar" mode="aspectFill"></image>
 					<view class="comment-content">
 						<view class="comment-header">
 							<text class="comment-name">{{ comment.userName }}</text>
-							<text class="comment-tag" v-if="comment.userId === circle.ownerId">圈主</text>
+							<text class="comment-tag" v-if="isOwnerComment(comment)">圈主</text>
 						</view>
 						<text class="comment-text">{{ comment.content }}</text>
 						<view class="comment-footer">
@@ -143,6 +143,7 @@
 		circleApi
 	} from '@/request/api'
 	import { useUserStore } from '@/store/user'
+	import { normalizeImageForDisplay, pad2, toSubmittableImageBase64 } from '@/utils/image'
 
 	export default {
 		setup() {
@@ -169,6 +170,7 @@
 					latitude: '',
 					longitude: '',
 					budget: '',
+					money: '',
 					maxMembers: 6,
 					joinStatus: 0,
 					circleUserItemList: []
@@ -183,31 +185,50 @@
 		computed: {
 			isOwner() {
 				if (!this.userId) return false
-				return this.circle.ownerId === this.userId
+				return String(this.circle.ownerId || '') === String(this.userId || '')
 			},
 			isParticipant() {
-				return this.circle.joinStatus === 1
+				return Number(this.circle.joinStatus) === 1
 			},
 			isActivityStarted() {
 				if (!this.circle.activityTime) return false
-				const activityTime = new Date(this.circle.activityTime)
+				const activityTime = this.parseCircleDate(this.circle.activityTime)
+				if (!activityTime) return false
 				return activityTime < new Date()
 			},
 			isFull() {
-				return this.circle.circleUserItemList?.length >= this.circle.maxMembers
+				return this.memberList.length >= Number(this.circle.maxMembers || 6)
 			},
 			remainingSpots() {
-				const currentMembers = this.circle.circleUserItemList?.length || 0
-				return Math.max(0, this.circle.maxMembers - currentMembers)
+				const currentMembers = this.memberList.length || 0
+				return Math.max(0, Number(this.circle.maxMembers || 6) - currentMembers)
 			},
 			buttonText() {
 				if (this.isOwner) return '编辑'
 				if (this.isActivityStarted) return '活动已开始'
+				if (this.isParticipant) return '退出圈子'
 				if (this.isFull) return '人数已满'
-				return this.circle.joinStatus === 1 ? '您已加入' : '加入'
+				return '加入'
+			},
+			isActionDisabled() {
+				if (this.isOwner) return false
+				if (this.isActivityStarted) return true
+				return this.isFull && !this.isParticipant
 			},
 			ownerInfo() {
-				return this.circle.circleUserItemList?.find(member => member.ownerFlag === 1)
+				for (let index = 0; index < this.memberList.length; index += 1) {
+					const member = this.memberList[index]
+					if (member && Number(member.ownerFlag) === 1) return member
+				}
+				return null
+			},
+			ownerAvatar() {
+				const image = (this.ownerInfo && this.ownerInfo.image) || this.circle.ownerImage
+				return normalizeImageForDisplay(image, '/static/default-avatar.png')
+			},
+			memberList() {
+				const list = this.circle.circleUserItemList || this.circle.userList || this.circle.members || []
+				return Array.isArray(list) ? list : []
 			},
 			canComment() {
 				return this.isParticipant || this.isOwner
@@ -254,6 +275,21 @@
 				}
 				return result
 			},
+			parseCircleDate(value) {
+				if (!value) return null
+				if (typeof value === 'number') {
+					const timestamp = value < 1000000000000 ? value * 1000 : value
+					const date = new Date(timestamp)
+					return isNaN(date.getTime()) ? null : date
+				}
+				if (typeof value === 'string' && /^\d+$/.test(value)) {
+					const timestamp = Number(value)
+					const date = new Date(timestamp < 1000000000000 ? timestamp * 1000 : timestamp)
+					return isNaN(date.getTime()) ? null : date
+				}
+				const date = new Date(String(value).replace(/-/g, '/').replace('T', ' '))
+				return isNaN(date.getTime()) ? null : date
+			},
 			async loadCurrentPage(options){
 				// #ifdef MP-WEIXIN
 				if (uni.getSystemInfoSync().platform === 'devtools') {
@@ -277,11 +313,23 @@
 					},
 					fail: (err) => {
 						console.error('获取位置失败：', err)
+						this.longitude = 116.24145697699653
+						this.latitude = 39.93208468967014
+						this.loadCircleDetail(options, this.longitude, this.latitude)
 					}
 				})
 			},
 			getAvatar(item) {
-				return item.image ? item.image : "/static/default-avatar.png";
+				return normalizeImageForDisplay(item.image, '/static/default-avatar.png')
+			},
+			getCommentAvatar(comment) {
+				return normalizeImageForDisplay(comment && comment.userImage, '/static/default-avatar.png')
+			},
+			isOwnerMember(member) {
+				return Number(member && member.ownerFlag) === 1
+			},
+			isOwnerComment(comment) {
+				return String((comment && comment.userId) || '') === String(this.circle.ownerId || '')
 			},
 			goBack() {
 				uni.switchTab({
@@ -289,14 +337,22 @@
 				});
 			},
 			navigateToUser() {
+				const ownerId = this.circle.ownerId || (this.ownerInfo && this.ownerInfo.userId)
+				if (!ownerId) {
+					uni.showToast({
+						title: '用户信息不存在',
+						icon: 'none'
+					})
+					return
+				}
 				uni.navigateTo({
-					url: '/pages/user/user'
+					url: `/pages/profile/profileDetail?userId=${ownerId}`
 				})
 			},
 			
 			async loadCircleDetail(options, longitude, latitude){
-				this.userId = await uni.getStorageSync('token')
-				if (options?.circleId) {
+				this.userId = await this.userStore.getUserId()
+				if (options && options.circleId) {
 					// 先用路由参数设置基本信息
 					this.circle = {
 						...this.circle,
@@ -305,11 +361,15 @@
 				
 					// 获取详细信息 
 					try {
-						const openId = await uni.getStorageSync('token') || ''
-						const res = await circleApi.getCircleDetail(options.circleId, openId, this.longitude, this
-							.latitude)
+						const res = await circleApi.getCircleDetail(options.circleId, this.userId, longitude, latitude)
 						if (res.status === 10000 && res.data) {
-							this.circle = res.data
+							this.circle = {
+								...this.circle,
+								...res.data,
+								circleUserItemList: res.data.circleUserItemList || res.data.userList || res.data.members || []
+							}
+						} else {
+							throw new Error(res.message || res.msg || '获取圈子详情失败')
 						}
 					} catch (error) {
 						console.error('获取圈子详情失败:', error)
@@ -334,46 +394,41 @@
 				})
 			},
 			async handleJoin() {
-				const openId = await uni.getStorageSync('token') || ''
-				if (this.circle.joinStatus === 0) {
-					this.circle.joinStatus = 1
-					const res = await circleApi.bindCirCle({
-						circleId: this.circle.circleId,
-						userId: openId,
-						status: 1
-					})
-					if (res.status === 10000 && res.data) {
-						uni.showToast({
-							title: '加入成功',
-							icon: 'success'
-						})
-					} else {
-						uni.showToast({
-							title: '加入失败' + res.data.msg,
-							icon: 'error'
-						})
-					}
+				const userId = await this.userStore.getUserId()
+				const originalJoinStatus = this.circle.joinStatus
+				const nextJoinStatus = Number(originalJoinStatus) === 0 ? 1 : 0
+				const successTitle = nextJoinStatus === 1 ? '加入成功' : '已退出圈子'
+				const fallbackError = nextJoinStatus === 1 ? '加入失败' : '退出失败'
 
-				} else {
-					this.circle.joinStatus = 0
+				try {
+					this.circle.joinStatus = nextJoinStatus
 					const res = await circleApi.bindCirCle({
 						circleId: this.circle.circleId,
-						userId: openId,
-						status: 0
+						userId,
+						status: nextJoinStatus
 					})
-					if (res.status === 10000 && res.data) {
-						uni.showToast({
-							title: '已退出圈子',
-							icon: 'none'
-						})
-					} else {
-						uni.showToast({
-							title: '退出失败' + res.data.msg,
-							icon: 'error'
-						})
+					if (res.status !== 10000) {
+						throw new Error(this.getResponseMessage(res, fallbackError))
 					}
+					uni.showToast({
+						title: successTitle,
+						icon: nextJoinStatus === 1 ? 'success' : 'none'
+					})
+					await this.loadCurrentPage(this.options)
+				} catch (error) {
+					this.circle.joinStatus = originalJoinStatus
+					console.error('更新圈子加入状态失败:', error)
+					uni.showToast({
+						title: error.message || fallbackError,
+						icon: 'none'
+					})
 				}
-				await this.loadCurrentPage(this.options)
+			},
+
+			getResponseMessage(res, fallback) {
+				if (!res) return fallback
+				const data = res.data || {}
+				return res.message || res.msg || data.message || data.msg || fallback
 			},
 			// 预览图片
 			previewImage(index) {
@@ -385,20 +440,21 @@
 
 			// 格式化预算
 			formatBudget(budget) {
-				if (!budget) return '免费'
-				return budget
+				if (budget === undefined || budget === null || budget === '' || Number(budget) === 0) return '免费'
+				return `${budget} 元/人`
 			},
 
 			// 格式化活动时间
 			formatActivityTime(time) {
 				if (!time) return '时间待定'
-				const date = new Date(time)
+				const date = this.parseCircleDate(time)
+				if (!date) return '时间待定'
 				const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 				const weekday = weekdays[date.getDay()]
-				const month = (date.getMonth() + 1).toString().padStart(2, '0')
-				const day = date.getDate().toString().padStart(2, '0')
-				const hours = date.getHours().toString().padStart(2, '0')
-				const minutes = date.getMinutes().toString().padStart(2, '0')
+				const month = pad2(date.getMonth() + 1)
+				const day = pad2(date.getDate())
+				const hours = pad2(date.getHours())
+				const minutes = pad2(date.getMinutes())
 				return `${date.getFullYear()}.${month}.${day} ${weekday} ${hours}:${minutes}`
 			},
 
@@ -489,12 +545,14 @@
 									if (refreshSuccess) {
 										uni.showToast({ title: '删除成功', icon: 'success' })
 									}
+								} else {
+									throw new Error(res.message || res.msg || '删除失败')
 								}
-							} catch (error) {
-								uni.hideLoading()
-								console.error('删除评论失败:', error)
-								uni.showToast({ title: '删除失败', icon: 'none' })
-							}
+								} catch (error) {
+									uni.hideLoading()
+									console.error('删除评论失败:', error)
+									uni.showToast({ title: error.message || '删除失败', icon: 'none' })
+								}
 						}
 					}
 				})
@@ -507,8 +565,13 @@
 					uni.showToast({ title: '用户名称不能为空', icon: 'none' })
 					return false
 				}
-				if (!userInfo.image) {
-					uni.showToast({ title: '用户头像不能为空', icon: 'none' })
+				if (!toSubmittableImageBase64(userInfo.image)) {
+					uni.showToast({ title: '请重新设置头像', icon: 'none' })
+					setTimeout(() => {
+						uni.navigateTo({
+							url: '/pages/profile/profileNew'
+						})
+					}, 900)
 					return false
 				}
 				return true
@@ -521,7 +584,7 @@
 					content: this.commentContent,
 					userId: this.userId,
 					userName: this.userStore.userInfo.userName,
-					userImage: this.userStore.userInfo.image,
+					userImage: toSubmittableImageBase64(this.userStore.userInfo.image),
 					status: 1 // 默认生效状态
 				}
 				
@@ -566,6 +629,8 @@
 							if (refreshSuccess) {
 								uni.showToast({ title: '编辑成功', icon: 'success' })
 							}
+						} else {
+							throw new Error(res.message || res.msg || '编辑失败')
 						}
 					} else {
 						// 新增评论
@@ -579,14 +644,16 @@
 							if (refreshSuccess) {
 								uni.showToast({ title: '发表成功', icon: 'success' })
 							}
+						} else {
+							throw new Error(res.message || res.msg || '发表失败')
 						}
 					}
 					this.hideCommentModal()
-				} catch (error) {
-					uni.hideLoading()
-					console.error('提交评论失败:', error)
-					uni.showToast({ title: '操作失败', icon: 'none' })
-				}
+					} catch (error) {
+						uni.hideLoading()
+						console.error('提交评论失败:', error)
+						uni.showToast({ title: error.message || '操作失败', icon: 'none' })
+					}
 			},
 
 								// 获取评论列表（从圈子详情数据中获取）
@@ -608,17 +675,17 @@
 
 			// 检查是否可以管理评论
 			canManageComment(comment) {
-				return this.isOwner || (this.isParticipant && comment.userId === this.userId)
+				return this.isOwner || (this.isParticipant && String(comment.userId || '') === String(this.userId || ''))
 			},
 
 			// 检查是否可以编辑评论（只能编辑自己的评论）
 			canEditComment(comment) {
-				return comment.userId === this.userId
+				return String(comment.userId || '') === String(this.userId || '')
 			},
 
 			// 检查是否可以删除评论（圈主可以删除任何评论，参与者只能删除自己的评论）
 			canDeleteComment(comment) {
-				return this.isOwner || comment.userId === this.userId
+				return this.isOwner || String(comment.userId || '') === String(this.userId || '')
 			},
 
 			// 刷新圈子详情
@@ -1064,5 +1131,334 @@
 			color: #999 !important;
 			cursor: not-allowed;
 		}
+	}
+</style>
+
+<style lang="scss" scoped>
+	.circle-detail {
+		min-height: 100vh;
+		padding-bottom: 42px;
+		background:
+			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
+		color: #2f241d;
+		box-sizing: border-box;
+	}
+
+	.circle-detail .nav-header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: calc(var(--status-bar-height) + 14px) 18px 14px;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
+		background: rgba(255, 250, 245, 0.88) !important;
+		color: #2f241d !important;
+		backdrop-filter: blur(18px);
+	}
+
+	.circle-detail .left-btn {
+		min-width: 54px;
+		height: 34px;
+		line-height: 34px;
+		padding: 0 12px;
+		border: 1px solid rgba(111, 61, 29, 0.12);
+		border-radius: 999px;
+		background: #fffaf5;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
+		color: #6f3d1d;
+		font-size: 13px !important;
+		font-weight: 900;
+		text-align: center;
+	}
+
+	.circle-detail .header-title {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		color: #2f241d !important;
+		font-size: 17px !important;
+		font-weight: 900 !important;
+		line-height: 1.35;
+		text-align: center;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.circle-detail .user-icon {
+		display: flex;
+		width: 54px;
+		justify-content: flex-end;
+	}
+
+	.circle-detail .user-icon .avatar {
+		width: 34px !important;
+		height: 34px !important;
+		border-radius: 13px !important;
+		background: #f4e7dc;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.12);
+	}
+
+	.circle-detail .circle-info {
+		padding: 18px 18px 0 !important;
+	}
+
+	.circle-detail .circle-header {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		justify-content: space-between;
+		margin-bottom: 14px !important;
+		padding: 0 2px;
+	}
+
+	.circle-detail .creator-text {
+		flex: 1;
+		min-width: 0;
+		color: #6f3d1d !important;
+		font-size: 14px !important;
+		font-weight: 800;
+		line-height: 1.45;
+	}
+
+	.circle-detail .action-btn {
+		min-width: 86px !important;
+		height: 40px !important;
+		line-height: 40px !important;
+		margin: 0 !important;
+		padding: 0 16px !important;
+		border: 0 !important;
+		border-radius: 16px !important;
+		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+		box-shadow: 0 12px 24px rgba(111, 61, 29, 0.18);
+		color: #ffffff !important;
+		font-size: 14px !important;
+		font-weight: 900;
+	}
+
+	.circle-detail .action-btn::after,
+	.circle-detail .cancel-btn::after,
+	.circle-detail .submit-btn::after {
+		border: none;
+	}
+
+	.circle-detail .action-btn.joined,
+	.circle-detail .action-btn.disabled {
+		border: 1px solid rgba(82, 49, 31, 0.1) !important;
+		background: #f3eee8 !important;
+		box-shadow: none;
+		color: #a89a91 !important;
+	}
+
+	.circle-detail .activity-card,
+	.circle-detail .circle-desc .desc-box,
+	.circle-detail .members-section,
+	.circle-detail .comments-section {
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 22px;
+		background: #fffaf5 !important;
+		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+	}
+
+	.circle-detail .activity-card {
+		margin: 0 0 16px !important;
+		padding: 18px !important;
+	}
+
+	.circle-detail .activity-title {
+		display: block;
+		margin-bottom: 14px !important;
+		color: #2f241d !important;
+		font-size: 19px !important;
+		font-weight: 900 !important;
+		line-height: 1.35;
+		text-align: left !important;
+	}
+
+	.circle-detail .activity-info {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: flex-start !important;
+		margin-bottom: 12px !important;
+	}
+
+	.circle-detail .info-item {
+		display: inline-flex;
+		align-items: center;
+		max-width: 100%;
+		min-height: 32px;
+		padding: 7px 10px;
+		border-radius: 999px;
+		background: #f7eadf;
+		color: #6f3d1d;
+	}
+
+	.circle-detail .info-icon,
+	.circle-detail .info-text {
+		font-size: 13px !important;
+		font-weight: 800;
+		color: #6f3d1d !important;
+	}
+
+	.circle-detail .activity-time,
+	.circle-detail .activity-location {
+		margin-top: 10px;
+	}
+
+	.circle-detail .time-text,
+	.circle-detail .location-text {
+		color: #2f241d !important;
+		font-size: 14px !important;
+		font-weight: 700;
+		line-height: 1.5;
+	}
+
+	.circle-detail .location-tip {
+		display: block;
+		margin-top: 4px;
+		color: #8a766a !important;
+		font-size: 12px !important;
+	}
+
+	.circle-detail .circle-desc {
+		margin-bottom: 0 !important;
+	}
+
+	.circle-detail .desc-title,
+	.circle-detail .section-title {
+		display: block;
+		margin-bottom: 10px !important;
+		color: #2f241d !important;
+		font-size: 16px !important;
+		font-weight: 900 !important;
+	}
+
+	.circle-detail .desc-box {
+		padding: 16px !important;
+	}
+
+	.circle-detail .desc-content,
+	.circle-detail .member-content-text,
+	.circle-detail .comment-text {
+		color: #8a766a !important;
+		font-size: 14px !important;
+		line-height: 1.6 !important;
+	}
+
+	.circle-detail .members-section,
+	.circle-detail .comments-section {
+		margin: 16px 18px 0 !important;
+		padding: 18px !important;
+		border-top: 1px solid rgba(82, 49, 31, 0.12) !important;
+	}
+
+	.circle-detail .member-item,
+	.circle-detail .comment-item {
+		display: flex;
+		align-items: flex-start;
+		margin-bottom: 0 !important;
+		padding: 14px 0;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
+	}
+
+	.circle-detail .member-item:last-child,
+	.circle-detail .comment-item:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	.circle-detail .member-avatar,
+	.circle-detail .comment-avatar {
+		width: 46px !important;
+		height: 46px !important;
+		margin-right: 12px !important;
+		border-radius: 16px !important;
+		background: #f4e7dc;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.1);
+	}
+
+	.circle-detail .member-name,
+	.circle-detail .comment-name {
+		color: #2f241d !important;
+		font-size: 15px !important;
+		font-weight: 900 !important;
+	}
+
+	.circle-detail .member-tag,
+	.circle-detail .comment-tag {
+		padding: 4px 8px !important;
+		border-radius: 999px !important;
+		background: #f7eadf !important;
+		color: #6f3d1d !important;
+		font-size: 11px !important;
+		font-weight: 900;
+	}
+
+	.circle-detail .comment-input-bar {
+		margin-bottom: 4px !important;
+		padding: 12px 14px !important;
+		border: 1px solid rgba(82, 49, 31, 0.12) !important;
+		border-radius: 18px !important;
+		background: #ffffff !important;
+		box-shadow: none !important;
+	}
+
+	.circle-detail .comment-input-bar:active {
+		border-color: rgba(156, 91, 46, 0.28) !important;
+		background: #fff8f1 !important;
+	}
+
+	.circle-detail .placeholder-text,
+	.circle-detail .comment-time,
+	.circle-detail .action-text,
+	.circle-detail .empty-text {
+		color: #8a766a !important;
+	}
+
+	.circle-detail .comment-modal {
+		padding: 20px !important;
+		border-radius: 24px 24px 0 0 !important;
+		background: #fffaf5 !important;
+	}
+
+	.circle-detail .modal-title {
+		color: #2f241d !important;
+		font-size: 18px !important;
+		font-weight: 900 !important;
+	}
+
+	.circle-detail .comment-input {
+		width: 100%;
+		height: 120px !important;
+		padding: 12px !important;
+		border: 1px solid rgba(82, 49, 31, 0.12) !important;
+		border-radius: 18px !important;
+		background: #ffffff !important;
+		color: #2f241d;
+		font-size: 14px !important;
+	}
+
+	.circle-detail .cancel-btn,
+	.circle-detail .submit-btn {
+		height: 44px !important;
+		line-height: 44px !important;
+		border: 0 !important;
+		border-radius: 18px !important;
+		font-size: 15px !important;
+		font-weight: 900;
+	}
+
+	.circle-detail .cancel-btn {
+		background: #f3eee8 !important;
+		color: #6f3d1d !important;
+	}
+
+	.circle-detail .submit-btn {
+		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+		color: #ffffff !important;
 	}
 </style>

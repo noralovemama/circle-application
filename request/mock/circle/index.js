@@ -1,7 +1,7 @@
 // 生成模拟数据
 export const generateMockList = (params = {}) => {
-  const current = parseInt(params?.current) || 1
-  const size = parseInt(params?.size) || 10
+  const current = parseInt(params && params.current) || 1
+  const size = parseInt(params && params.size) || 10
   
   console.log('[Mock] 生成数据，参数:', { current, size })
   
@@ -50,8 +50,8 @@ export const page = (params) => {
   console.log('[Mock] 收到请求:', params)
   
   // 参数验证和转换
-  const current = parseInt(params?.current) || 1
-  const size = parseInt(params?.size) || 10
+  const current = parseInt(params && params.current) || 1
+  const size = parseInt(params && params.size) || 10
   
   if (current < 1 || size < 1) {
     console.error('[Mock] 参数错误:', { current, size })
@@ -74,4 +74,4 @@ export const page = (params) => {
 
 export const list = (params) => {
   return page(params)
-} 
+}

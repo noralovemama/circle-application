@@ -83,8 +83,17 @@
 
 <script>
 import userApi from '@/request/api/user'
+import { useUserStore } from '@/store/user'
+import { normalizeImageForDisplay } from '@/utils/image'
 
 export default {
+  setup() {
+    const userStore = useUserStore()
+    return {
+      userStore
+    }
+  },
+
   data() {
     return {
       targetUserId: null, // 要查看的用户ID，如果为null则查看当前用户
@@ -140,14 +149,14 @@ export default {
         if (this.targetUserId) {
           userId = this.targetUserId
         } else {
-          userId = await uni.getStorageSync('token')
+          userId = await this.userStore.getUserId()
         }
         
         const res = await userApi.getUserProfile(userId)
         if (res.status === 10000 && res.data) {
           this.userInfo = {
             userName: res.data.userName,
-            image: res.data.image,
+            image: normalizeImageForDisplay(res.data.image),
             birthday: res.data.birthday || res.data.age, // 兼容旧数据
             company: res.data.company,
             position: res.data.position,
@@ -335,5 +344,164 @@ export default {
     text-align: center;
     z-index: 100;
   }
+}
+</style>
+
+<style lang="scss" scoped>
+.profile-detail-container {
+  min-height: 100vh;
+  padding-bottom: 112px !important;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+    linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
+  color: #2f241d;
+  box-sizing: border-box;
+}
+
+.profile-detail-container .nav-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+  border-bottom: 1px solid rgba(82, 49, 31, 0.1);
+  background: rgba(255, 250, 245, 0.88) !important;
+  color: #2f241d !important;
+  backdrop-filter: blur(18px);
+}
+
+.profile-detail-container .left-btn,
+.profile-detail-container .right-btn {
+  min-width: 54px;
+}
+
+.profile-detail-container .left-btn {
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(111, 61, 29, 0.12);
+  border-radius: 999px;
+  background: #fffaf5;
+  box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
+  color: #6f3d1d;
+  font-size: 13px !important;
+  font-weight: 900;
+  text-align: center;
+}
+
+.profile-detail-container .header-title {
+  flex: 1;
+  color: #2f241d !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.profile-detail-container .user-info,
+.profile-detail-container .info-section {
+  margin: 18px 18px 0 !important;
+  border: 1px solid rgba(82, 49, 31, 0.12);
+  border-radius: 22px;
+  background: #fffaf5 !important;
+  box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+}
+
+.profile-detail-container .user-info {
+  padding: 18px !important;
+}
+
+.profile-detail-container .avatar-wrapper {
+  width: 72px !important;
+  height: 72px !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #f4e7dc !important;
+  box-shadow: 0 10px 22px rgba(111, 61, 29, 0.12);
+}
+
+.profile-detail-container .avatar-placeholder {
+  background: #f7eadf !important;
+  color: #8a766a !important;
+  font-size: 13px !important;
+  font-weight: 800;
+}
+
+.profile-detail-container .nickname {
+  margin-bottom: 6px !important;
+  color: #2f241d !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  line-height: 1.25;
+}
+
+.profile-detail-container .nickname-tip {
+  color: #8a766a !important;
+  font-size: 13px !important;
+}
+
+.profile-detail-container .info-section {
+  padding: 18px !important;
+}
+
+.profile-detail-container .info-title {
+  margin-bottom: 8px !important;
+  color: #2f241d !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.35;
+}
+
+.profile-detail-container .info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 15px 0 !important;
+  border-bottom: 1px solid rgba(82, 49, 31, 0.08) !important;
+}
+
+.profile-detail-container .info-item:last-child {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+.profile-detail-container .label {
+  width: 82px !important;
+  color: #6f3d1d !important;
+  font-size: 14px !important;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.profile-detail-container .value {
+  flex: 1;
+  color: #8a766a !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  text-align: right;
+  word-break: break-word;
+}
+
+.profile-detail-container .bottom-edit-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 34px;
+  left: 18px !important;
+  z-index: 100;
+  width: auto !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  transform: none !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+  box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 900;
+  text-align: center;
 }
 </style>

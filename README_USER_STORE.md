@@ -241,7 +241,7 @@ const messageData = {
   content: '留言内容',
   userId: '用户ID',
   userName: '用户名称', // 必需参数
-  userImage: '用户头像', // 必需参数
+  userImage: '纯base64用户头像', // 必需参数，不带 data:image 前缀，不传远程URL
   messageId: '留言ID', // 编辑/删除时必需
   status: 1 // 必需参数：1-生效/0-删除
 }
@@ -257,7 +257,7 @@ async submitComment() {
       content: this.commentContent,
       userId: this.userId,
       userName: this.userStore.userInfo.userName, // 从store获取用户名称
-      userImage: this.userStore.userInfo.image, // 从store获取用户头像
+      userImage: toSubmittableImageBase64(this.userStore.userInfo.image), // 只提交纯base64头像
       status: 1 // 生效状态
     })
   } catch (error) {
@@ -272,8 +272,8 @@ async deleteComment() {
     circleId: this.circle.circleId,
     userId: this.userId,
     userName: this.userStore.userInfo.userName,
-    userImage: this.userStore.userInfo.image,
+    userImage: toSubmittableImageBase64(this.userStore.userInfo.image),
     status: 0 // 删除状态
   })
 }
-``` 
+```

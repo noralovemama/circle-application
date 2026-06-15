@@ -68,11 +68,6 @@ export default {
     }
   },
 
-  onLoad() {
-    console.log('[Login] build: network-probe-v4')
-    this.probeLoginNetwork()
-  },
-
   data() {
     return {
       phone: '',
@@ -85,7 +80,10 @@ export default {
     }
   },
   methods: {
-    validatePhone() {
+    validatePhone(e) {
+      if (e && e.detail) {
+        this.phone = e.detail.value
+      }
       // 验证手机号格式
       const phoneReg = /^1[3-9]\d{9}$/
       this.isPhoneValid = phoneReg.test(this.phone)
@@ -98,7 +96,8 @@ export default {
       
       try {
         const res = await userApi.sendVerificationCode(this.phone)
-        if (Number(res.status ?? res.code) === 10000) {
+        const statusCode = res.status !== undefined && res.status !== null ? res.status : res.code
+        if (Number(statusCode) === 10000) {
           // 开始倒计时，不自动填充验证码
           this.counting = true
           this.countdown = 60
@@ -129,57 +128,14 @@ export default {
       }
     },
 
-    probeLoginNetwork() {
-      const payload = {
-        phoneNumber: '18814842880',
-        validateCode: '123456',
-        code: 'wx547471e427601166'
-      }
-      ;['https://fry-river-fish.com/token/login', 'https://www.fry-river-fish.com/token/login'].forEach((url) => {
-        const start = Date.now()
-        uni.request({
-          url,
-          method: 'POST',
-          data: payload,
-          timeout: 10000,
-          dataType: 'json',
-          header: {
-            'Content-Type': 'application/json'
-          },
-          success: (response) => {
-            console.log('[NetworkProbe] success', {
-              url,
-              duration: Date.now() - start,
-              statusCode: response.statusCode,
-              data: response.data
-            })
-          },
-          fail: (error) => {
-            console.error('[NetworkProbe] fail', {
-              url,
-              duration: Date.now() - start,
-              errMsg: error.errMsg,
-              errno: error.errno
-            })
-          },
-          complete: (result) => {
-            console.log('[NetworkProbe] complete', {
-              url,
-              duration: Date.now() - start,
-              errMsg: result.errMsg,
-              statusCode: result.statusCode
-            })
-          }
-        })
-      })
-    },
-
     async handleLogin() {
       if (!this.phone || !this.validateCode || this.isLoggingIn) return
 
       this.isLoggingIn = true
       try {
-        const { code } = await uni.login()
+        const loginResult = await uni.login()
+        const loginData = Array.isArray(loginResult) ? loginResult[1] : loginResult
+        const code = loginData && loginData.code
         if (!code) {
           throw new Error('获取登录凭证失败')
         }
@@ -193,11 +149,10 @@ export default {
 
         const res = await userApi.loginWithCode(this.phone, this.validateCode, code)
         if (res.status === 10000) {
-          await this.userStore.setTokenInfo({
-            openId: res.data.openId,
-            expireAt: res.data.expireAt,
-            userId: res.data.userId
-          })
+          const tokenSaved = await this.userStore.setTokenInfo(res.data || {})
+          if (!tokenSaved) {
+            throw new Error('登录响应缺少用户凭证')
+          }
 
           try {
             await this.userStore.getUserDetail()

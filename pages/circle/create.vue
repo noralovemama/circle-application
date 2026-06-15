@@ -11,12 +11,12 @@
 		<view class="form-section">
 			<!-- 创建人信息 -->
 			<view class="circle-header">
-				<text class="creator-text">{{ userStore?.userInfo?.userName || '我' }}想和大家一起</text>
+				<text class="creator-text">{{ getCreatorName() }}想和大家一起</text>
 			</view>
 			
 			<view class="form-item">
 				<text class="label">圈子名称<text class="required">*</text></text>
-				<input class="input" v-model="formData.circleName" placeholder="给圈子起个名字" />
+				<input class="input" v-model="formData.circleName" @input="onFieldInput('circleName', $event)" placeholder="给圈子起个名字" />
 			</view>
 
 			<view class="form-item">
@@ -34,7 +34,7 @@
 
 			<view class="form-item">
 				<text class="label">圈子描述<text class="required">*</text></text>
-				<textarea class="textarea" maxlength="3000" v-model="formData.introduction" placeholder="请输入圈子描述" />
+				<textarea class="textarea" maxlength="3000" v-model="formData.introduction" @input="onFieldInput('introduction', $event)" placeholder="请输入圈子描述" />
 			</view>
 
 			<!-- 位置选择 -->
@@ -71,7 +71,7 @@
 		</view>
 
 		<!-- 保存按钮 -->
-		<button class="save-btn" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : '保存' }}</button>
+		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : '保存' }}</button>
 
 		<!-- 底部占位 -->
 		<view class="bottom-space"></view>
@@ -81,6 +81,7 @@
 <script>
 	import circleApi from '@/request/api/circle'
 	import userApi from '@/request/api/user'
+	import { pad2, toSubmittableImageBase64 } from '@/utils/image'
 	import {
 		useUserStore,
 		
@@ -119,10 +120,10 @@
 			// 设置今天的日期和当前时间（用于限制日期时间选择）
 			const now = new Date();
 			const year = now.getFullYear();
-			const month = String(now.getMonth() + 1).padStart(2, '0');
-			const day = String(now.getDate()).padStart(2, '0');
-			const hour = String(now.getHours()).padStart(2, '0');
-			const minute = String(now.getMinutes()).padStart(2, '0');
+			const month = pad2(now.getMonth() + 1);
+			const day = pad2(now.getDate());
+			const hour = pad2(now.getHours());
+			const minute = pad2(now.getMinutes());
 			
 			this.todayDate = `${year}-${month}-${day}`
 			this.currentTime = `${hour}:${minute}`
@@ -138,17 +139,59 @@
 				this.isEdit = true
 				await this.loadCircleData()
 			} else {
-				// 获取当前日期和时间
-				const hour = String(now.getHours()).padStart(2, '0');
-				const minute = String(now.getMinutes()).padStart(2, '0');
-
-				// 格式化日期和时间 yyyy-MM-dd HH:mm:ss
-				this.formData.activityDate = `${year}-${month}-${day}`;
-				this.formData.activityTime = `${hour}:${minute}`;
+				const defaultActivityTime = this.formatDateParts(new Date(now.getTime() + 60 * 60 * 1000))
+				this.formData.activityDate = defaultActivityTime.date;
+				this.formData.activityTime = defaultActivityTime.time;
 			}
 		},
 
 		methods: {
+			getCreatorName() {
+				return (this.userStore && this.userStore.userInfo && this.userStore.userInfo.userName) || '我'
+			},
+
+			onFieldInput(field, e) {
+				this.formData[field] = e.detail.value
+			},
+
+			parseCircleDate(value) {
+				if (!value) return null
+
+				if (typeof value === 'number') {
+					const timestamp = value < 1000000000000 ? value * 1000 : value
+					const date = new Date(timestamp)
+					return isNaN(date.getTime()) ? null : date
+				}
+
+				if (typeof value === 'string' && /^\d+$/.test(value)) {
+					const timestamp = Number(value)
+					const date = new Date(timestamp < 1000000000000 ? timestamp * 1000 : timestamp)
+					return isNaN(date.getTime()) ? null : date
+				}
+
+				const date = new Date(String(value).replace(/-/g, '/').replace('T', ' '))
+				return isNaN(date.getTime()) ? null : date
+			},
+
+			formatDateParts(dateObj) {
+				return {
+					date: `${dateObj.getFullYear()}-${pad2(dateObj.getMonth() + 1)}-${pad2(dateObj.getDate())}`,
+					time: `${pad2(dateObj.getHours())}:${pad2(dateObj.getMinutes())}`
+				}
+			},
+
+			extractCircleId(res) {
+				if (!res) return ''
+				const data = res.data
+				if (typeof data === 'string' || typeof data === 'number') return String(data)
+				if (!data || typeof data !== 'object') return ''
+				if (data.circleId) return data.circleId
+				if (data.circleID) return data.circleID
+				if (data.id) return data.id
+				if (data.circle && data.circle.circleId) return data.circle.circleId
+				return ''
+			},
+
 			goBack() {
 				const pages = getCurrentPages()
 				if (pages.length > 1) {
@@ -190,6 +233,20 @@
 					return false
 				}
 			},
+			getUserAvatarBase64(userInfo) {
+				return toSubmittableImageBase64(userInfo && userInfo.image)
+			},
+			promptResetAvatar() {
+				uni.showToast({
+					title: '请重新设置头像',
+					icon: 'none'
+				})
+				setTimeout(() => {
+					uni.navigateTo({
+						url: '/pages/profile/profileNew'
+					})
+				}, 900)
+			},
 			async loadCircleData() {
 				// #ifdef MP-WEIXIN
 				if (uni.getSystemInfoSync().platform === 'devtools') {
@@ -210,7 +267,8 @@
 						await this.loadCircleDataReal(longitude, latitude)
 					},
 					fail: (err) => {
-						console.error('获取位置失败：', err)
+						console.error('获取位置失败，使用默认位置加载圈子详情：', err)
+						this.loadCircleDataReal(116.24145697699653, 39.93208468967014)
 					}
 				})
 
@@ -218,26 +276,23 @@
 
 			async loadCircleDataReal(longitude, latitude) {
 				try {
-					this.userId = await uni.getStorageSync('token')
+					this.userId = await this.userStore.getUserId()
 					const res = await circleApi.getCircleDetail(this.circleId, this.userId, longitude, latitude)
 					if (res.status === 10000) {
 						const {
 							data
 						} = res
-						// 示例时间戳，精确到秒，实际使用时替换为真实的时间戳
-						const timestamp = data.activityTime;
-						// 将时间戳转换为 Date 对象
-						const dateObj = new Date(timestamp);
+						const dateObj = this.parseCircleDate(data.activityTime) || new Date();
 
 						// 提取日期部分，格式为 YYYY-MM-DD
 						const year = dateObj.getFullYear();
-						const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-						const day = String(dateObj.getDate()).padStart(2, '0');
+						const month = pad2(dateObj.getMonth() + 1);
+						const day = pad2(dateObj.getDate());
 						const date = `${year}-${month}-${day}`;
 
 						// 提取时间部分，格式为 HH:MM
-						const hours = String(dateObj.getHours()).padStart(2, '0');
-						const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+						const hours = pad2(dateObj.getHours());
+						const minutes = pad2(dateObj.getMinutes());
 						const time = `${hours}:${minutes}`;
 						this.formData = {
 							circleName: data.circleName,
@@ -247,7 +302,7 @@
 							longitude: data.longitude,
 							activityTime: time,
 							activityDate: date,
-							money: data.money ? data.money.toString() : ''
+							money: data.money !== undefined && data.money !== null ? data.money.toString() : ''
 						}
 						
 						// 编辑模式下检查活动时间是否是过去的时间
@@ -266,8 +321,9 @@
 				uni.chooseLocation({
 					success: (res) => {
 						console.info('选择位置：', res)
-						this.formData.location = res.address
-						this.formData.address = res.address
+						const locationText = res.address || res.name || ''
+						this.formData.location = locationText
+						this.formData.address = res.address || locationText
 						this.formData.latitude = res.latitude
 						this.formData.longitude = res.longitude
 					},
@@ -346,9 +402,9 @@
 						// 自动调整为当前时间后1小时
 						const now = new Date()
 						const futureTime = new Date(now.getTime() + 60 * 60 * 1000)
-						const hours = String(futureTime.getHours()).padStart(2, '0')
-						const minutes = String(futureTime.getMinutes()).padStart(2, '0')
-						this.formData.activityTime = `${hours}:${minutes}`
+						const formatted = this.formatDateParts(futureTime)
+						this.formData.activityDate = formatted.date
+						this.formData.activityTime = formatted.time
 						
 						uni.showToast({
 							title: '时间已自动调整为1小时后',
@@ -374,15 +430,15 @@
 				if (this.formData.activityDate === this.todayDate && this.formData.activityTime) {
 					const now = new Date()
 					const selectedDateTime = new Date(`${this.formData.activityDate}T${this.formData.activityTime}:00`)
-					
+
 					if (selectedDateTime <= now) {
 						// 选择的时间已过去，自动调整为当前时间后1小时
 						const futureTime = new Date(now.getTime() + 60 * 60 * 1000) // 加1小时
-						const hours = String(futureTime.getHours()).padStart(2, '0')
-						const minutes = String(futureTime.getMinutes()).padStart(2, '0')
-						
-						this.formData.activityTime = `${hours}:${minutes}`
-						
+						const formatted = this.formatDateParts(futureTime)
+
+						this.formData.activityDate = formatted.date
+						this.formData.activityTime = formatted.time
+
 						uni.showToast({
 							title: '活动时间不能是过去，已自动调整',
 							icon: 'none',
@@ -407,18 +463,14 @@
 				if (this.formData.activityDate && this.formData.activityTime) {
 					const now = new Date()
 					const activityDateTime = new Date(`${this.formData.activityDate}T${this.formData.activityTime}:00`)
-					
+
 					if (activityDateTime <= now) {
 						// 如果加载的活动时间已经是过去时间，自动调整为当前时间后1小时
 						const futureTime = new Date(now.getTime() + 60 * 60 * 1000)
-						const year = futureTime.getFullYear()
-						const month = String(futureTime.getMonth() + 1).padStart(2, '0')
-						const day = String(futureTime.getDate()).padStart(2, '0')
-						const hours = String(futureTime.getHours()).padStart(2, '0')
-						const minutes = String(futureTime.getMinutes()).padStart(2, '0')
-						
-						this.formData.activityDate = `${year}-${month}-${day}`
-						this.formData.activityTime = `${hours}:${minutes}`
+						const formatted = this.formatDateParts(futureTime)
+
+						this.formData.activityDate = formatted.date
+						this.formData.activityTime = formatted.time
 						
 						uni.showModal({
 							title: '活动时间调整',
@@ -435,16 +487,18 @@
 			},
 
 			async saveCircle() {
-			const requiredFields = {
-				circleName: '圈子名称',
-				money: '预算',
-				introduction: '圈子描述',
-				location: '位置',
-				activityTime: '活动时间',
-				activityDate: '活动日期',
-			}
+				const requiredFields = [
+					{ field: 'circleName', label: '圈子名称' },
+					{ field: 'money', label: '预算' },
+					{ field: 'introduction', label: '圈子描述' },
+					{ field: 'location', label: '位置' },
+					{ field: 'activityTime', label: '活动时间' },
+					{ field: 'activityDate', label: '活动日期' }
+				]
 
-				for (const [field, label] of Object.entries(requiredFields)) {
+				for (let index = 0; index < requiredFields.length; index += 1) {
+					const field = requiredFields[index].field
+					const label = requiredFields[index].label
 					if (!this.formData[field]) {
 						uni.showToast({
 							title: `请填写${label}`,
@@ -491,71 +545,67 @@
 					// 确保用户信息完整
 					await this.userStore.ensureUserInfo()
 					const userInfo = this.userStore.userInfo
-					
-				if (this.isEdit) {
-					// 编辑模式下也要验证活动时间不能是过去
-					const activityDateTime = new Date(`${this.formData.activityDate}T${this.formData.activityTime}:00`)
-					const now = new Date()
-					
-					if (activityDateTime <= now) {
-						uni.showToast({
-							title: '活动时间不能是过去的时间',
-							icon: 'none'
-						})
-						return
-					}
-					
-					// 获取用户信息用于更新
-					const ownerId = await this.userStore.getOpenId()
-					const ownerName = userInfo.userName
-					const ownerImage = userInfo.image
-					
-					// 直接使用 money 字段，并添加用户信息
-					const updateData = {
-						circleId: this.circleId,
-						...this.formData,
-						ownerId,
-						ownerName,
-						ownerImage
-					}
-					await circleApi.updateCircle(updateData)
-					} else {
-						const ownerId = await this.userStore.getOpenId()
+					let savedCircleId = this.circleId
+
+					if (this.isEdit) {
+						const ownerId = await this.userStore.getUserId()
 						const ownerName = userInfo.userName
-						const ownerImage = userInfo.image
-						
-				// 将用户头像添加到表单数据中，直接使用 money 字段
-				const createData = {
-					...this.formData,
-					ownerImage
-				}
-				
-				await circleApi.createCircle(createData, ownerId, ownerName)
+						const ownerImage = this.getUserAvatarBase64(userInfo)
+						if (!ownerImage) {
+							this.promptResetAvatar()
+							return
+						}
+						const updateData = {
+							circleId: this.circleId,
+							...this.formData,
+							ownerId,
+							ownerName,
+							ownerImage
+						}
+						const res = await circleApi.updateCircle(updateData)
+						if (res.status !== 10000) {
+							throw new Error(res.message || res.msg || '保存失败')
+						}
+						savedCircleId = this.extractCircleId(res) || savedCircleId
+					} else {
+						const ownerId = await this.userStore.getUserId()
+						const ownerName = userInfo.userName
+						const ownerImage = this.getUserAvatarBase64(userInfo)
+						if (!ownerImage) {
+							this.promptResetAvatar()
+							return
+						}
+						const createData = {
+							...this.formData,
+							ownerImage
+						}
+						const res = await circleApi.createCircle(createData, ownerId, ownerName)
+						if (res.status !== 10000) {
+							throw new Error(res.message || res.msg || '保存失败')
+						}
+						savedCircleId = this.extractCircleId(res) || savedCircleId
+					}
+
+					if (savedCircleId) {
+						this.circleId = savedCircleId
 					}
 
 					uni.showToast({
 						title: '保存成功',
 						icon: 'success'
 					})
-					
-					// 如果是创建新圈子（非编辑模式），标记需要刷新主页数据
-					if (!this.isEdit) {
-						this.circleStore.markNeedRefresh()
-					}
-					
-					const circleId = this.circleId
+
+					this.circleStore.markNeedRefresh()
+
+					const circleId = savedCircleId
 					setTimeout(() => {
 						const pages = getCurrentPages()
-						if (this.isEdit && pages.length > 1) {
-
-							if (circleId) {
-								uni.navigateTo({
-									url: `/pages/circle/detail?circleId=${circleId}`
-								})
-							} else {
-								uni.navigateBack()
-							}
-
+						if (circleId) {
+							uni.redirectTo({
+								url: `/pages/circle/detail?circleId=${circleId}`
+							})
+						} else if (this.isEdit && pages.length > 1) {
+							uni.navigateBack()
 						} else {
 							uni.switchTab({
 								url: '/pages/circle/circle'
@@ -721,5 +771,178 @@
 		.bottom-space {
 			height: 50px;
 		}
+	}
+</style>
+
+<style lang="scss" scoped>
+	.create-container {
+		min-height: 100vh;
+		padding-bottom: 112px !important;
+		background:
+			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
+		color: #2f241d;
+		box-sizing: border-box;
+	}
+
+	.create-container .nav-header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
+		background: rgba(255, 250, 245, 0.88) !important;
+		color: #2f241d !important;
+		backdrop-filter: blur(18px);
+	}
+
+	.create-container .left-btn {
+		min-width: 54px;
+		height: 34px;
+		line-height: 34px;
+		padding: 0 12px;
+		border: 1px solid rgba(111, 61, 29, 0.12);
+		border-radius: 999px;
+		background: #fffaf5;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
+		color: #6f3d1d;
+		font-size: 13px !important;
+		font-weight: 900;
+		text-align: center;
+	}
+
+	.create-container .header-title {
+		flex: 1;
+		color: #2f241d !important;
+		font-size: 17px !important;
+		font-weight: 900 !important;
+		line-height: 1.35;
+		text-align: center;
+	}
+
+	.create-container .right-placeholder {
+		width: 54px !important;
+	}
+
+	.create-container .form-section {
+		margin: 18px 18px 0;
+		padding: 18px !important;
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 22px;
+		background: #fffaf5;
+		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+	}
+
+	.create-container .circle-header {
+		margin-bottom: 18px !important;
+		padding-bottom: 14px;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
+	}
+
+	.create-container .creator-text {
+		color: #6f3d1d !important;
+		font-size: 15px !important;
+		font-weight: 900;
+		line-height: 1.45;
+	}
+
+	.create-container .form-item {
+		margin-bottom: 18px !important;
+	}
+
+	.create-container .form-item:last-child {
+		margin-bottom: 0 !important;
+	}
+
+	.create-container .label {
+		display: block;
+		margin-bottom: 8px !important;
+		color: #2f241d !important;
+		font-size: 14px !important;
+		font-weight: 900;
+		line-height: 1.4;
+	}
+
+	.create-container .required {
+		color: #9c5b2e !important;
+	}
+
+	.create-container .input,
+	.create-container .textarea,
+	.create-container .location-picker,
+	.create-container .picker {
+		width: 100%;
+		border: 1px solid rgba(82, 49, 31, 0.12) !important;
+		border-radius: 18px !important;
+		background: #ffffff !important;
+		color: #2f241d !important;
+		font-size: 14px !important;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+	}
+
+	.create-container .input,
+	.create-container .picker {
+		height: 48px !important;
+		line-height: 48px;
+		padding: 0 14px !important;
+	}
+
+	.create-container .textarea {
+		min-height: 132px !important;
+		padding: 12px 14px !important;
+		line-height: 1.6;
+	}
+
+	.create-container .location-picker {
+		min-height: 48px !important;
+		padding: 10px 14px !important;
+		line-height: 1.45;
+	}
+
+	.create-container .location-text,
+	.create-container .picker text {
+		color: #2f241d !important;
+	}
+
+	.create-container .hint {
+		display: block;
+		margin-top: 6px !important;
+		color: #8a766a !important;
+		font-size: 12px !important;
+		line-height: 1.4;
+	}
+
+	.create-container .save-btn {
+		position: fixed;
+		right: 18px;
+		bottom: 34px;
+		left: 18px !important;
+		width: auto !important;
+		height: 48px !important;
+		line-height: 48px !important;
+		transform: none !important;
+		border: 0 !important;
+		border-radius: 18px !important;
+		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+		box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+		color: #ffffff !important;
+		font-size: 15px !important;
+		font-weight: 900;
+	}
+
+	.create-container .save-btn::after {
+		border: none;
+	}
+
+	.create-container .save-btn-disabled {
+		border: 1px solid rgba(82, 49, 31, 0.1) !important;
+		background: #f3eee8 !important;
+		box-shadow: none;
+		color: #a89a91 !important;
+		opacity: 1 !important;
 	}
 </style>

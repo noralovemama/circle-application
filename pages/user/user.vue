@@ -8,9 +8,9 @@
 		</view>
 
 		<!-- 用户基本信息 -->
-		<view class="user-info">
+		<view class="user-info" @click="navigateToProfileEdit">
 			<!-- 头像选择 -->
-			<button class="avatar-wrapper">
+			<button class="avatar-wrapper" @click.stop="navigateToProfileEdit">
 				<image v-if="tempUserInfo.avatar" :src="tempUserInfo.avatar" class="avatar-image" mode="aspectFill" />
 				<view v-else class="avatar-placeholder">
 					<text>头像</text>
@@ -19,7 +19,8 @@
 
 			<!-- 昵称输入 -->
 			<input type="nickname" v-model="tempUserInfo.nickname"
-				:placeholder="showNicknameTip ? '请输入昵称' : defaultNickname" disabled="true"
+				:placeholder="showNicknameTip ? '请输入昵称' : defaultNickname"
+				@focus="navigateToProfileEdit"
 				class="nickname-input" :class="{ 'highlight': showNicknameTip }" />
 		</view>
 
@@ -45,6 +46,7 @@
 
 <script>
 	import { useUserStore } from '@/store/user'
+	import { normalizeImageForDisplay } from '@/utils/image'
 	
 	export default {
 		setup() {
@@ -74,21 +76,14 @@
 		methods: {
 			async loadUserProfile() {
 				try {
-					// 优先从store获取用户信息
-					if (this.userStore.userInfo.userName) {
-						this.defaultNickname = this.userStore.userInfo.userName
-						this.tempUserInfo.nickname = this.userStore.userInfo.userName
-						this.tempUserInfo.avatar = this.userStore.userInfo.image
-						return
-					}
-					
-					// 如果store中没有，则调用API获取
+					const isLoggedIn = await this.userStore.checkLoginStatus()
+					if (!isLoggedIn) return
 					await this.userStore.getUserDetail()
-					if (this.userStore.userInfo.userName) {
-						this.defaultNickname = this.userStore.userInfo.userName
-						this.tempUserInfo.nickname = this.userStore.userInfo.userName
-						this.tempUserInfo.avatar = this.userStore.userInfo.image
-					}
+					const userInfo = this.userStore.userInfo || {}
+					this.defaultNickname = userInfo.userName || '用户名XXX'
+					this.tempUserInfo.nickname = userInfo.userName || ''
+					this.tempUserInfo.avatar = normalizeImageForDisplay(userInfo.image)
+					this.showNicknameTip = !userInfo.userName
 				} catch (error) {
 					console.log('用户未创建个人信息')
 				}
@@ -116,9 +111,15 @@
 			},
 
 			handleMyCircles() {
-				// 通过 url 传递参数
-				uni.reLaunch({
-					url: '/pages/circle/circle?type=my'
+				uni.setStorageSync('circleListType', 'my')
+				uni.switchTab({
+					url: '/pages/circle/circle'
+				})
+			},
+
+			navigateToProfileEdit() {
+				uni.navigateTo({
+					url: '/pages/profile/profileNew'
 				})
 			},
 
@@ -267,5 +268,140 @@
 			font-size: 14px;
 			color: #007AFF;
 		}
+	}
+</style>
+
+<style lang="scss" scoped>
+	.user-container {
+		min-height: 100vh;
+		background:
+			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
+			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
+		color: #2f241d;
+		box-sizing: border-box;
+	}
+
+	.user-container .nav-header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
+		background: rgba(255, 250, 245, 0.88) !important;
+		color: #2f241d !important;
+		backdrop-filter: blur(18px);
+	}
+
+	.user-container .left-btn {
+		min-width: 54px;
+		height: 34px;
+		line-height: 34px;
+		padding: 0 12px;
+		border: 1px solid rgba(111, 61, 29, 0.12);
+		border-radius: 999px;
+		background: #fffaf5;
+		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
+		color: #6f3d1d;
+		font-size: 13px !important;
+		font-weight: 900;
+		text-align: center;
+	}
+
+	.user-container .header-title {
+		flex: 1;
+		color: #2f241d !important;
+		font-size: 17px !important;
+		font-weight: 900 !important;
+		line-height: 1.35;
+		text-align: center;
+	}
+
+	.user-container .right-placeholder {
+		width: 54px !important;
+	}
+
+	.user-container .user-info,
+	.user-container .function-list {
+		margin: 18px 18px 0 !important;
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 22px;
+		background: #fffaf5 !important;
+		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+	}
+
+	.user-container .user-info {
+		padding: 18px !important;
+	}
+
+	.user-container .avatar-wrapper {
+		width: 72px !important;
+		height: 72px !important;
+		border: 0 !important;
+		border-radius: 22px !important;
+		background: #f4e7dc !important;
+		box-shadow: 0 10px 22px rgba(111, 61, 29, 0.12);
+	}
+
+	.user-container .avatar-wrapper::after {
+		border: none;
+	}
+
+	.user-container .avatar-image {
+		width: 100%;
+		height: 100%;
+	}
+
+	.user-container .avatar-placeholder {
+		background: #f7eadf;
+		color: #8a766a !important;
+		font-size: 13px !important;
+		font-weight: 800;
+	}
+
+	.user-container .nickname-input {
+		min-width: 0;
+		height: 44px;
+		padding: 0 !important;
+		color: #2f241d !important;
+		font-size: 20px !important;
+		font-weight: 900;
+		line-height: 44px;
+	}
+
+	.user-container .nickname-input.highlight {
+		border-bottom: 1px solid #9c5b2e !important;
+	}
+
+	.user-container .tip-text {
+		margin: 8px 18px 0;
+		padding: 0 2px !important;
+		color: #9c5b2e !important;
+		font-size: 13px !important;
+		font-weight: 800;
+	}
+
+	.user-container .function-list {
+		overflow: hidden;
+		background: #fffaf5 !important;
+	}
+
+	.user-container .function-item {
+		padding: 18px !important;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.08) !important;
+		color: #2f241d !important;
+		font-size: 15px !important;
+		font-weight: 900;
+	}
+
+	.user-container .function-item:active {
+		background: #fff4ea !important;
+	}
+
+	.user-container .function-item:last-child {
+		border-bottom: none !important;
 	}
 </style>
