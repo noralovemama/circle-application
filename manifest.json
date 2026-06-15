@@ -74,7 +74,7 @@
             "orientation" : [ "portrait-primary" ]
         },
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "quickapp" : {},
@@ -107,19 +107,19 @@
         },
         "requiredPrivateInfos" : [ "getLocation", "chooseLocation" ],
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "mp-alipay" : {
         "usingComponents" : true,
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "mp-baidu" : {
         "usingComponents" : true,
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         },
         "dynamicLib" : {
             "editorLib" : {
@@ -130,13 +130,13 @@
     "mp-toutiao" : {
         "usingComponents" : true,
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "mp-jd" : {
         "usingComponents" : true,
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "h5" : {
@@ -156,37 +156,37 @@
             "timeout" : 20000
         },
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "vueVersion" : "3",
     "mp-kuaishou" : {
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "mp-lark" : {
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "mp-qq" : {
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "quickapp-webview-huawei" : {
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "quickapp-webview-union" : {
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         }
     },
     "uniStatistics" : {
         "version" : "2",
-        "enable" : true
+        "enable" : false
     }
 }

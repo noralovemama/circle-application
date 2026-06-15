@@ -5,9 +5,6 @@
 	import {
 		version
 	} from './package.json'
-	// #ifdef APP
-	import checkUpdate from '@/uni_modules/uni-upgrade-center-app/utils/check-update';
-	// #endif
 
 	export default {
 		onLaunch: function() {
@@ -22,11 +19,6 @@
 			// console.log('%c uni-app官方团队诚邀优秀前 端工程师加盟，一起打造更卓越的uni-app & uniCloud，欢迎投递简历到 hr2013@dcloud.io', 'color: red');
 			console.log('App Launch');
 			// #ifdef APP-PLUS
-			// App平台检测升级，服务端代码是通过uniCloud的云函数实现的，详情可参考：https://ext.dcloud.net.cn/plugin?id=4542
-			if (plus.runtime.appid !== 'HBuilder') { // 真机运行不需要检查更新，真机运行时appid固定为'HBuilder'，这是调试基座的appid
-				checkUpdate()
-			}
-
 			// 一键登录预登陆，可以显著提高登录速度
 			uni.preLogin({
 				provider: 'univerify',
