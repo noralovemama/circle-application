@@ -17,6 +17,24 @@ export const useCircleStore = defineStore('circle', {
   }),
 
   actions: {
+    mergeUniqueCircles(existingList = [], incomingList = []) {
+      const mergedMap = new Map()
+      const appendItem = (item) => {
+        if (!item || typeof item !== 'object') return
+        const key = item.circleId || item.circleID || item.id
+        if (!key) return
+        const previous = mergedMap.get(String(key)) || {}
+        mergedMap.set(String(key), {
+          ...previous,
+          ...item
+        })
+      }
+
+      existingList.forEach(appendItem)
+      incomingList.forEach(appendItem)
+      return Array.from(mergedMap.values())
+    },
+
     // 重置状态
     reset() {
       this.list = []
@@ -94,10 +112,10 @@ export const useCircleStore = defineStore('circle', {
 
           // 更新列表数据
           if (isRefresh) {
-            this.list = records
+            this.list = this.mergeUniqueCircles([], records)
           } else {
-            // 使用新数组更新，确保视图更新
-            this.list = [...this.list, ...records]
+            // 接口可能会重复返回上一页数据，这里按 circleId 去重合并
+            this.list = this.mergeUniqueCircles(this.list, records)
           }
           this.error = null
           

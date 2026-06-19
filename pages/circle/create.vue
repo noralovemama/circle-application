@@ -8,15 +8,42 @@
 		</view>
 
 		<!-- 表单区域 -->
+		<view class="hero-card">
+			<text class="hero-eyebrow">{{ isEdit ? '调整这局' : '发起一局' }}</text>
+			<text class="hero-title">{{ isEdit ? '把信息补清楚，让大家更容易决定要不要来' : '写清楚主题、时间和地点，等对的人加入' }}</text>
+			<text class="hero-copy">{{ isEdit ? '你可以修改时间、地点和描述，也可以重新组织这局的表达方式。' : '固定 6 人的小局，信息越具体，越容易吸引到真正想参与的人。' }}</text>
+		</view>
+
 		<view class="form-section">
-			<!-- 创建人信息 -->
 			<view class="circle-header">
 				<text class="creator-text">{{ getCreatorName() }}想和大家一起</text>
+				<text class="creator-subtitle">{{ isEdit ? '更新这场小局的安排' : '发起一场值得参加的小局' }}</text>
+			</view>
+
+			<view class="tips-card">
+				<text class="tips-title">填写建议</text>
+				<text class="tips-copy">把主题写具体一点，把地点写到大家能判断通勤成本的程度，再给一句为什么值得来。</text>
+			</view>
+
+			<view class="preview-card">
+				<text class="preview-title">发布后，别人会先看到这些</text>
+				<view class="preview-item">
+					<text class="preview-index">1</text>
+					<text class="preview-copy">这局聊什么，适不适合自己</text>
+				</view>
+				<view class="preview-item">
+					<text class="preview-index">2</text>
+					<text class="preview-copy">时间和地点值不值得专门赶过去</text>
+				</view>
+				<view class="preview-item">
+					<text class="preview-index">3</text>
+					<text class="preview-copy">为什么值得来，现场会是什么感觉</text>
+				</view>
 			</view>
 			
 			<view class="form-item">
 				<text class="label">圈子名称<text class="required">*</text></text>
-				<input class="input" v-model="formData.circleName" @input="onFieldInput('circleName', $event)" placeholder="给圈子起个名字" />
+				<input class="input" v-model="formData.circleName" @input="onFieldInput('circleName', $event)" placeholder="比如：产品经理周三晚咖啡局" />
 			</view>
 
 			<view class="form-item">
@@ -25,23 +52,23 @@
 					class="input" 
 					type="number" 
 					v-model="formData.money" 
-					placeholder="请输入预算金额（元/人）" 
+					placeholder="比如：0 元、68 元 / 人" 
 					@input="onMoneyInput"
 					@blur="onMoneyBlur"
 				/>
-				<text class="hint">请输入0或正整数</text>
+				<text class="hint">预算写人均就够了，0 代表免费。</text>
 			</view>
 
 			<view class="form-item">
 				<text class="label">圈子描述<text class="required">*</text></text>
-				<textarea class="textarea" maxlength="3000" v-model="formData.introduction" @input="onFieldInput('introduction', $event)" placeholder="请输入圈子描述" />
+				<textarea class="textarea" maxlength="3000" v-model="formData.introduction" @input="onFieldInput('introduction', $event)" placeholder="这一局想聊什么、适合什么样的人来、你希望现场是什么氛围？" />
 			</view>
 
 			<!-- 位置选择 -->
 			<view class="form-item">
 				<text class="label">位置<text class="required">*</text></text>
 				<view class="location-picker" @click="openMap">
-					<text class="location-text">{{ formData.location || '点击选择位置' }}</text>
+					<text class="location-text">{{ formData.location || '选择一个大家容易判断距离的位置' }}</text>
 					<uni-icons type="right" size="16"></uni-icons>
 				</view>
 			</view>
@@ -71,7 +98,7 @@
 		</view>
 
 		<!-- 保存按钮 -->
-		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : '保存' }}</button>
+		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : (isEdit ? '更新这局' : '发布这局') }}</button>
 
 		<!-- 底部占位 -->
 		<view class="bottom-space"></view>
@@ -212,7 +239,7 @@
 					const userInfo = this.userStore.userInfo
 					if (!userInfo.userName || !userInfo.image) {
 						uni.showToast({
-							title: '请先完善个人信息',
+							title: '先把你的资料补完整，再来发起小局',
 							icon: 'none'
 						})
 						// 跳转到用户信息页面（tabbar页面）
@@ -227,7 +254,7 @@
 				} catch (error) {
 					console.error('加载用户信息失败:', error)
 					uni.showToast({
-						title: '加载用户信息失败',
+						title: '你的资料暂时没加载出来',
 						icon: 'none'
 					})
 					return false
@@ -238,7 +265,7 @@
 			},
 			promptResetAvatar() {
 				uni.showToast({
-					title: '请重新设置头像',
+					title: '头像需要重新选一次',
 					icon: 'none'
 				})
 				setTimeout(() => {
@@ -310,7 +337,7 @@
 					}
 				} catch (error) {
 					uni.showToast({
-						title: '加载数据失败',
+						title: '这局的信息暂时没加载出来',
 						icon: 'none'
 					})
 				}
@@ -370,7 +397,7 @@
 				// 如果输入为空，显示提示
 				if (!value || value.trim() === '') {
 					uni.showToast({
-						title: '请填写预算金额',
+						title: '先把预算补上',
 						icon: 'none',
 						duration: 1500
 					})
@@ -381,7 +408,7 @@
 				const numValue = parseInt(value)
 				if (isNaN(numValue) || numValue < 0) {
 					uni.showToast({
-						title: '请输入有效的预算金额',
+						title: '预算写成 0 或正整数就可以',
 						icon: 'none',
 						duration: 1500
 					})
@@ -407,7 +434,7 @@
 						this.formData.activityTime = formatted.time
 						
 						uni.showToast({
-							title: '时间已自动调整为1小时后',
+							title: '时间已经顺延到 1 小时后',
 							icon: 'none',
 							duration: 2000
 						})
@@ -440,7 +467,7 @@
 						this.formData.activityTime = formatted.time
 
 						uni.showToast({
-							title: '活动时间不能是过去，已自动调整',
+							title: '刚刚选到过去时间了，已经帮你往后顺延',
 							icon: 'none',
 							duration: 2000
 						})
@@ -473,8 +500,8 @@
 						this.formData.activityTime = formatted.time
 						
 						uni.showModal({
-							title: '活动时间调整',
-							content: '原活动时间已过期，已自动调整为当前时间后1小时。您可以重新选择合适的时间。',
+							title: '时间帮你调整过了',
+							content: '原来的活动时间已经过去了，我先帮你顺延到 1 小时后，你也可以再改成更合适的时间。',
 							showCancel: false,
 							confirmText: '知道了'
 						})
@@ -501,7 +528,7 @@
 					const label = requiredFields[index].label
 					if (!this.formData[field]) {
 						uni.showToast({
-							title: `请填写${label}`,
+							title: `先补上${label}`,
 							icon: 'none'
 						})
 						return
@@ -511,7 +538,7 @@
 				// 验证money是否为有效的非负整数且不为空
 				if (!this.formData.money || this.formData.money.trim() === '') {
 					uni.showToast({
-						title: '请填写预算',
+						title: '先把预算补上',
 						icon: 'none'
 					})
 					return
@@ -520,7 +547,7 @@
 				const moneyValue = parseInt(this.formData.money)
 				if (isNaN(moneyValue) || moneyValue < 0) {
 					uni.showToast({
-						title: '请输入有效的预算金额',
+						title: '预算写成 0 或正整数就可以',
 						icon: 'none'
 					})
 					return
@@ -532,7 +559,7 @@
 				
 				if (activityDateTime <= now) {
 					uni.showToast({
-						title: '活动时间不能是过去的时间',
+						title: '活动时间要晚于现在',
 						icon: 'none'
 					})
 					return
@@ -591,7 +618,7 @@
 					}
 
 					uni.showToast({
-						title: '保存成功',
+						title: '这局已经保存好了',
 						icon: 'success'
 					})
 
@@ -615,7 +642,7 @@
 				} catch (error) {
 					console.error('创建圈子失败:', error)
 					uni.showToast({
-						title: error.message || '创建失败，请重试',
+						title: error.message || '这局还没保存成功',
 						icon: 'none',
 						duration: 2000
 					})
@@ -630,159 +657,12 @@
 <style lang="scss" scoped>
 	.create-container {
 		min-height: 100vh;
-		background-color: #fff;
-		padding-bottom: 50px;
-
-		.nav-header {
-			background-color: #000;
-			color: #fff;
-			padding: 44px 16px 12px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-
-			.left-btn {
-				font-size: 16px;
-			}
-
-			.header-title {
-				font-size: 18px;
-				font-weight: 500;
-			}
-
-			.right-placeholder {
-				width: 32px;
-			}
-		}
-
-		.form-section {
-			padding: 20px 16px;
-
-			.circle-header {
-				margin-bottom: 20px;
-
-				.creator-text {
-					font-size: 16px;
-					color: #333;
-				}
-			}
-
-			.form-item {
-				margin-bottom: 20px;
-
-				.label {
-					font-size: 16px;
-					color: #333;
-					margin-bottom: 8px;
-					display: block;
-					
-					.required {
-						color: #ff4757;
-						margin-left: 2px;
-					}
-				}
-
-				.input {
-					width: 100%;
-					height: 44px;
-					border: 1px solid #e8e8e8;
-					border-radius: 4px;
-					padding: 0 12px;
-					font-size: 14px;
-					box-sizing: border-box;
-				}
-
-				.textarea {
-					width: 100%;
-					min-height: 80px;
-					border: 1px solid #e8e8e8;
-					border-radius: 4px;
-					padding: 12px;
-					font-size: 14px;
-					resize: none;
-					box-sizing: border-box;
-				}
-
-				.hint {
-					font-size: 12px;
-					color: #999;
-					margin-top: 4px;
-					display: block;
-				}
-
-				.location-picker,
-				.picker {
-					width: 100%;
-					height: 44px;
-					border: 1px solid #e8e8e8;
-					border-radius: 4px;
-					padding: 0 12px;
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					font-size: 14px;
-					color: #333;
-					box-sizing: border-box;
-				}
-
-				.location-picker {
-					width: 100%;
-					min-height: 44px;
-					border: 1px solid #e8e8e8;
-					border-radius: 4px;
-					padding: 8px 12px;
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					font-size: 14px;
-					color: #333;
-					box-sizing: border-box;
-
-					.location-text {
-						flex: 1;
-						margin-right: 8px;
-						word-break: break-all;
-					}
-				}
-			}
-		}
-
-		.save-btn {
-			position: fixed;
-			bottom: 34px;
-			left: 50%;
-			transform: translateX(-50%);
-			width: 200px;
-			height: 44px;
-			line-height: 44px;
-			background-color: #fff;
-			color: #333;
-			font-size: 16px;
-			border: 1px solid #e8e8e8;
-			border-radius: 22px;
-			text-align: center;
-
-			&:disabled {
-				opacity: 0.5;
-				background-color: #ccc;
-			}
-		}
-
-		.bottom-space {
-			height: 50px;
-		}
-	}
-</style>
-
-<style lang="scss" scoped>
-	.create-container {
-		min-height: 100vh;
 		padding-bottom: 112px !important;
 		background:
 			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
-		color: #2f241d;
+			radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+			linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%) !important;
+		color: #30261f;
 		box-sizing: border-box;
 	}
 
@@ -792,66 +672,182 @@
 		z-index: 10;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+		gap: 8px;
+		padding: calc(var(--status-bar-height) + 10px) 16px 12px !important;
 		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
 		background: rgba(255, 250, 245, 0.88) !important;
-		color: #2f241d !important;
+		color: #30261f !important;
 		backdrop-filter: blur(18px);
 	}
 
 	.create-container .left-btn {
-		min-width: 54px;
-		height: 34px;
-		line-height: 34px;
-		padding: 0 12px;
-		border: 1px solid rgba(111, 61, 29, 0.12);
+		min-width: 52px;
+		height: 30px;
+		line-height: 30px;
+		padding: 0 10px;
+		border: 1px solid rgba(111, 61, 29, 0.1);
 		border-radius: 999px;
-		background: #fffaf5;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
-		color: #6f3d1d;
-		font-size: 13px !important;
-		font-weight: 900;
+		background: rgba(255, 255, 255, 0.72);
+		box-shadow: 0 4px 12px rgba(111, 61, 29, 0.05);
+		color: #7b5f48;
+		font-size: 12px !important;
+		font-weight: 700;
 		text-align: center;
 	}
 
 	.create-container .header-title {
 		flex: 1;
-		color: #2f241d !important;
+		color: #30261f !important;
 		font-size: 17px !important;
-		font-weight: 900 !important;
-		line-height: 1.35;
+		font-weight: 800 !important;
+		line-height: 30px;
 		text-align: center;
+		letter-spacing: -0.2px;
 	}
 
 	.create-container .right-placeholder {
-		width: 54px !important;
+		width: 52px !important;
 	}
 
 	.create-container .form-section {
-		margin: 18px 18px 0;
-		padding: 18px !important;
+		margin: 20px 20px 0;
+		padding: 20px !important;
 		border: 1px solid rgba(82, 49, 31, 0.12);
 		border-radius: 22px;
 		background: #fffaf5;
-		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
+	}
+
+	.create-container .hero-card {
+		margin: 20px 20px 0;
+		padding: 24px 20px;
+		border-radius: 24px;
+		background:
+			radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 30%),
+			linear-gradient(135deg, #8d6b53 0%, #a88569 56%, #c6a68d 100%);
+		box-shadow: 0 18px 35px rgba(111, 84, 63, 0.2);
+		color: #fffaf6;
+	}
+
+	.create-container .hero-eyebrow {
+		display: inline-flex;
+		align-items: center;
+		padding: 7px 10px;
+		margin-bottom: 14px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.16);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 1px;
+	}
+
+	.create-container .hero-title {
+		display: block;
+		font-size: 24px;
+		font-weight: 900;
+		line-height: 32px;
+		letter-spacing: -0.4px;
+	}
+
+	.create-container .hero-copy {
+		display: block;
+		margin-top: 10px;
+		font-size: 14px;
+		line-height: 22px;
+		color: rgba(255, 250, 246, 0.86);
 	}
 
 	.create-container .circle-header {
-		margin-bottom: 18px !important;
-		padding-bottom: 14px;
+		margin-bottom: 20px !important;
+		padding-bottom: 16px;
 		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
 	}
 
-	.create-container .creator-text {
-		color: #6f3d1d !important;
-		font-size: 15px !important;
+	.create-container .tips-card {
+		margin-bottom: 20px;
+		padding: 15px 16px 16px;
+		border-radius: 18px;
+		background: rgba(140, 102, 76, 0.08);
+	}
+
+	.create-container .preview-card {
+		margin-bottom: 20px;
+		padding: 16px;
+		border-radius: 18px;
+		background: rgba(255, 255, 255, 0.86);
+		border: 1px solid rgba(123, 95, 73, 0.08);
+	}
+
+	.create-container .preview-title {
+		display: block;
+		color: #30261f;
+		font-size: 15px;
 		font-weight: 900;
-		line-height: 1.45;
+		line-height: 22px;
+	}
+
+	.create-container .preview-item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding-top: 12px;
+	}
+
+	.create-container .preview-index {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		border-radius: 999px;
+		background: #f1e4d8;
+		color: #7b5f48;
+		font-size: 11px;
+		font-weight: 900;
+		line-height: 20px;
+		flex-shrink: 0;
+	}
+
+	.create-container .preview-copy {
+		color: #7d6a5c;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
+	.create-container .tips-title {
+		display: block;
+		color: #7b5f48;
+		font-size: 13px;
+		font-weight: 900;
+		line-height: 1.4;
+	}
+
+	.create-container .tips-copy {
+		display: block;
+		margin-top: 6px;
+		color: #7d6a5c;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
+	.create-container .creator-text {
+		display: block;
+		color: #7b5f48 !important;
+		font-size: 18px !important;
+		font-weight: 900;
+		line-height: 26px;
+	}
+
+	.create-container .creator-subtitle {
+		display: block;
+		margin-top: 6px;
+		color: #7d6a5c !important;
+		font-size: 13px !important;
+		line-height: 20px;
 	}
 
 	.create-container .form-item {
-		margin-bottom: 18px !important;
+		margin-bottom: 22px !important;
 	}
 
 	.create-container .form-item:last-child {
@@ -860,15 +856,15 @@
 
 	.create-container .label {
 		display: block;
-		margin-bottom: 8px !important;
-		color: #2f241d !important;
-		font-size: 14px !important;
+		margin-bottom: 10px !important;
+		color: #30261f !important;
+		font-size: 15px !important;
 		font-weight: 900;
-		line-height: 1.4;
+		line-height: 22px;
 	}
 
 	.create-container .required {
-		color: #9c5b2e !important;
+		color: #8c664c !important;
 	}
 
 	.create-container .input,
@@ -879,7 +875,7 @@
 		border: 1px solid rgba(82, 49, 31, 0.12) !important;
 		border-radius: 18px !important;
 		background: #ffffff !important;
-		color: #2f241d !important;
+		color: #30261f !important;
 		font-size: 14px !important;
 		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 	}
@@ -888,47 +884,51 @@
 	.create-container .picker {
 		height: 48px !important;
 		line-height: 48px;
-		padding: 0 14px !important;
+		padding: 0 16px !important;
+		font-size: 15px !important;
+		font-weight: 600;
 	}
 
 	.create-container .textarea {
-		min-height: 132px !important;
-		padding: 12px 14px !important;
-		line-height: 1.6;
+		min-height: 136px !important;
+		padding: 14px 16px !important;
+		font-size: 15px !important;
+		font-weight: 500;
+		line-height: 24px;
 	}
 
 	.create-container .location-picker {
 		min-height: 48px !important;
-		padding: 10px 14px !important;
-		line-height: 1.45;
+		padding: 12px 16px !important;
+		line-height: 24px;
 	}
 
 	.create-container .location-text,
 	.create-container .picker text {
-		color: #2f241d !important;
+		color: #30261f !important;
 	}
 
 	.create-container .hint {
 		display: block;
 		margin-top: 6px !important;
-		color: #8a766a !important;
-		font-size: 12px !important;
-		line-height: 1.4;
+		color: #7d6a5c !important;
+		font-size: 13px !important;
+		line-height: 20px;
 	}
 
 	.create-container .save-btn {
 		position: fixed;
-		right: 18px;
+		right: 20px;
 		bottom: 34px;
-		left: 18px !important;
+		left: 20px !important;
 		width: auto !important;
 		height: 48px !important;
 		line-height: 48px !important;
 		transform: none !important;
 		border: 0 !important;
 		border-radius: 18px !important;
-		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
-		box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%) !important;
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.18);
 		color: #ffffff !important;
 		font-size: 15px !important;
 		font-weight: 900;
@@ -940,9 +940,9 @@
 
 	.create-container .save-btn-disabled {
 		border: 1px solid rgba(82, 49, 31, 0.1) !important;
-		background: #f3eee8 !important;
+		background: #efe7df !important;
 		box-shadow: none;
-		color: #a89a91 !important;
+		color: #ad9d90 !important;
 		opacity: 1 !important;
 	}
 </style>

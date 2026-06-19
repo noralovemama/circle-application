@@ -1,32 +1,69 @@
 <template>
   <view class="login-container">
     <view class="brand-section">
+      <text class="brand-eyebrow">小群友</text>
       <text class="brand-title">小群友</text>
+      <text class="brand-copy">30 秒登录，先看附近在聊什么，再决定要不要加入一场想去的小局。</text>
+      <view class="value-points">
+        <text class="value-pill">固定 6 人</text>
+        <text class="value-pill">先留言再见面</text>
+        <text class="value-pill">聊得来再约朋友</text>
+      </view>
     </view>
 
-    <!-- 登录表单 -->
     <view class="login-form">
-      <!-- 手机号输入 -->
+      <view class="form-head">
+        <text class="form-title">登录继续</text>
+        <text class="form-subtitle">固定 6 人的小局，会更依赖真实身份和稳定联系。</text>
+      </view>
+
+      <view class="notice-bar">
+        <text class="notice-text">仅用于登录验证和活动联系，不会公开展示你的手机号。</text>
+      </view>
+
+      <view class="login-steps">
+        <view class="step-item">
+          <text class="step-index">1</text>
+          <view class="step-copy">
+            <text class="step-title">先登录</text>
+            <text class="step-desc">30 秒完成，进去先看看附近都在聊什么。</text>
+          </view>
+        </view>
+        <view class="step-item">
+          <text class="step-index">2</text>
+          <view class="step-copy">
+            <text class="step-title">挑一局</text>
+            <text class="step-desc">重点看主题、时间和发起人，合适再加入。</text>
+          </view>
+        </view>
+        <view class="step-item">
+          <text class="step-index">3</text>
+          <view class="step-copy">
+            <text class="step-title">先打个招呼</text>
+            <text class="step-desc">加入后可以留言确认时间、问细节，也更容易认识人。</text>
+          </view>
+        </view>
+      </view>
+
       <view class="input-group">
         <text class="country-code">+86</text>
         <input 
           class="phone-input" 
           type="number" 
           maxlength="11"
-          placeholder="输入手机号" 
+          placeholder="输入常用手机号" 
           placeholder-class="input-placeholder"
           v-model="phone"
           @input="validatePhone"
         />
       </view>
 
-      <!-- 验证码输入 -->
       <view class="input-group">
         <input 
           class="code-input" 
           type="number" 
           maxlength="6"
-          placeholder="输入验证码" 
+          placeholder="输入短信验证码" 
           placeholder-class="input-placeholder"
           v-model="validateCode"
         />
@@ -49,9 +86,8 @@
         :class="{ active: phone && validateCode }"
         @click="handleLogin"
       >
-        {{ isLoggingIn ? '登录中...' : '登录' }}
+        {{ isLoggingIn ? '登录中...' : '登录去看看' }}
       </button>
-
     </view>
   </view>
 </template>
@@ -111,16 +147,16 @@ export default {
           }, 1000)
 
           uni.showToast({
-            title: '验证码已发送',
+            title: '验证码已经发出',
             icon: 'success'
           })
         } else {
-          throw new Error(res.message || res.msg || '发送失败')
+          throw new Error(res.message || res.msg || '验证码没有发出去')
         }
       } catch (error) {
         console.error('发送验证码失败:', error)
         uni.showToast({
-          title: this.getErrorMessage(error, '发送失败'),
+          title: this.getErrorMessage(error, '验证码没有发出去'),
           icon: 'none'
         })
       } finally {
@@ -137,7 +173,7 @@ export default {
         const loginData = Array.isArray(loginResult) ? loginResult[1] : loginResult
         const code = loginData && loginData.code
         if (!code) {
-          throw new Error('获取登录凭证失败')
+          throw new Error('登录校验没有拿到，请再试一次')
         }
 
         console.log('[Login] wx.login code:', code)
@@ -151,7 +187,7 @@ export default {
         if (res.status === 10000) {
           const tokenSaved = await this.userStore.setTokenInfo(res.data || {})
           if (!tokenSaved) {
-            throw new Error('登录响应缺少用户凭证')
+            throw new Error('登录信息不完整，请稍后再试')
           }
 
           try {
@@ -161,7 +197,7 @@ export default {
           }
 
           uni.showToast({
-            title: '登录成功',
+            title: '登录成功，马上带你进去',
             icon: 'success'
           })
 
@@ -171,11 +207,11 @@ export default {
             })
           }, 1500)
         } else {
-          throw new Error(res.message || '登录失败')
+          throw new Error(res.message || '这次登录没有成功')
         }
       } catch (error) {
         uni.showToast({
-          title: error.message || '登录失败',
+          title: error.message || '这次登录没有成功',
           icon: 'none'
         })
       } finally {
@@ -204,25 +240,64 @@ export default {
   box-sizing: border-box;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-    linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%);
-  color: #2f241d;
+    radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+    linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%);
+  color: #30261f;
 
   .brand-section {
     padding-top: 36rpx;
     margin-bottom: 64rpx;
-    text-align: center;
+    padding-left: 8rpx;
   }
 
-
+  .brand-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.5);
+    color: #7b5f48;
+    font-size: 22rpx;
+    font-weight: 800;
+    letter-spacing: 1rpx;
+  }
 
   .brand-title {
     display: block;
+    margin-top: 24rpx;
     font-size: 88rpx;
     font-weight: 900;
     line-height: 1.08;
     letter-spacing: -4rpx;
-    color: #2f241d;
+    color: #30261f;
+  }
+
+  .brand-copy {
+    display: block;
+    max-width: 560rpx;
+    margin-top: 20rpx;
+    color: #7d6a5c;
+    font-size: 28rpx;
+    line-height: 1.6;
+  }
+
+  .value-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+    margin-top: 28rpx;
+  }
+
+  .value-pill {
+    min-height: 52rpx;
+    padding: 0 20rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 250, 245, 0.74);
+    color: #7b5f48;
+    font-size: 22rpx;
+    font-weight: 800;
+    line-height: 52rpx;
+    border: 1rpx solid rgba(123, 95, 73, 0.08);
   }
 
   .login-form {
@@ -232,6 +307,26 @@ export default {
     background: rgba(255, 250, 245, 0.9);
     box-shadow: 0 24rpx 56rpx rgba(80, 43, 18, 0.12);
     backdrop-filter: blur(18px);
+
+    .form-head {
+      margin-bottom: 22rpx;
+    }
+
+    .form-title {
+      display: block;
+      color: #30261f;
+      font-size: 38rpx;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .form-subtitle {
+      display: block;
+      margin-top: 10rpx;
+      color: #7d6a5c;
+      font-size: 24rpx;
+      line-height: 1.55;
+    }
 
     .input-group {
       display: flex;
@@ -247,7 +342,7 @@ export default {
       .country-code {
         font-size: 30rpx;
         font-weight: 800;
-        color: #6f3d1d;
+        color: #7b5f48;
         margin-right: 20rpx;
       }
 
@@ -256,7 +351,7 @@ export default {
         flex: 1;
         height: 100%;
         font-size: 30rpx;
-        color: #2f241d;
+        color: #30261f;
       }
 
       .get-code {
@@ -264,19 +359,81 @@ export default {
         font-weight: 800;
         color: #a89a91;
         padding-left: 24rpx;
+        transition: color 160ms ease, opacity 160ms ease;
 
         &.disabled {
           color: #b7aaa0;
         }
 
         &.active {
-          color: #9c5b2e;
+          color: #8c664c;
         }
 
         &.requesting {
           opacity: 0.5;
         }
       }
+    }
+
+    .notice-bar {
+      margin-bottom: 20rpx;
+      padding: 18rpx 20rpx;
+      border-radius: 24rpx;
+      background: rgba(140, 102, 76, 0.08);
+    }
+
+    .notice-text {
+      color: #7b5f48;
+      font-size: 24rpx;
+      line-height: 1.5;
+    }
+
+    .login-steps {
+      margin-bottom: 24rpx;
+      padding: 10rpx 0 2rpx;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 18rpx;
+      padding: 16rpx 0;
+    }
+
+    .step-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40rpx;
+      height: 40rpx;
+      border-radius: 999rpx;
+      background: #f1e4d8;
+      color: #7b5f48;
+      font-size: 22rpx;
+      font-weight: 900;
+      line-height: 40rpx;
+      flex-shrink: 0;
+    }
+
+    .step-copy {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-title {
+      display: block;
+      color: #30261f;
+      font-size: 26rpx;
+      font-weight: 900;
+      line-height: 38rpx;
+    }
+
+    .step-desc {
+      display: block;
+      margin-top: 6rpx;
+      color: #7d6a5c;
+      font-size: 23rpx;
+      line-height: 34rpx;
     }
 
     .input-placeholder {
@@ -298,9 +455,13 @@ export default {
       font-weight: 900;
 
       &.active {
-        background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
+        background: linear-gradient(135deg, #8c664c 0%, #72513b 100%);
         color: #ffffff;
-        box-shadow: 0 18rpx 34rpx rgba(111, 61, 29, 0.22);
+        box-shadow: 0 18rpx 34rpx rgba(94, 70, 52, 0.22);
+      }
+
+      &:not(.active) {
+        box-shadow: none;
       }
 
       &::after {
