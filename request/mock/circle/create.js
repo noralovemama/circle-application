@@ -4,7 +4,7 @@ export const createCircle = (data) => {
   // 模拟创建成功
   if (Math.random() > 0.1) { // 90% 成功率
     return {
-      code: 0,
+      status: 10000,
       message: 'success',
       data: {
         circleId: `circle_${Date.now()}`,
@@ -15,4 +15,4 @@ export const createCircle = (data) => {
   
   // 模拟创建失败
   throw new Error('模拟创建失败')
-} 
+}

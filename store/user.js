@@ -188,7 +188,7 @@ export const useUserStore = defineStore('user', {
 	  const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
 	  const currentPage = pages[pages.length - 1]
 	  if (currentPage && currentPage.route === 'pages/login/login') return
-	  uni.redirectTo({
+	  uni.reLaunch({
 	    url: '/pages/login/login'
 	  })
 	},

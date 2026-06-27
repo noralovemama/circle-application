@@ -1,6 +1,6 @@
 // 请求配置
 export default {
-  baseUrl: 'https://www.fry-river-fish.com/',
+  baseUrl: 'https://wxinlu.com/',
   timeout: 10000,
   loginTimeout: 60000,
   mock: {

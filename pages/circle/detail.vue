@@ -3,7 +3,7 @@
 		<!-- 顶部导航栏 -->
 		<view class="nav-header">
 			<view class="left-btn" @click="goBack">返回</view>
-			<text class="header-title">{{ circle.circleName }}</text>
+			<text class="header-title">{{ circle.circleName || '圈子详情' }}</text>
 			<view class="user-icon" @click="navigateToUser">
 				<image class="avatar" :src="ownerAvatar" mode="aspectFill"></image>
 			</view>
@@ -11,31 +11,42 @@
 
 		<!-- 圈子信息 -->
 		<view class="circle-info">
-			<!-- 创建人和加入按钮 -->
-				<view class="circle-header">
-					<text class="creator-text">{{ circle.ownerName }}想和大家一起</text>
-					<button class="action-btn"
-						:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': isParticipant, 'disabled': isActionDisabled }"
-						@click="handleAction"
-						:disabled="isActionDisabled">
-						{{ buttonText }}
-					</button>
+			<view class="circle-header">
+				<view class="hero-copy">
+					<text class="creator-text">{{ headerEyebrow }}</text>
+					<text class="hero-title">{{ circle.circleName || '这是一场认真聊天的小局' }}</text>
+					<text class="hero-subtitle">{{ headerSubtitle }}</text>
+					<view class="decision-points">
+						<text class="decision-pill">{{ isFull ? '人数已满' : `还剩 ${remainingSpots} 席` }}</text>
+						<text class="decision-pill">{{ isParticipant || isOwner ? '现在就能留言' : '加入后可以留言' }}</text>
+						<text class="decision-pill">{{ isActivityStarted ? '已经开局' : '先聊再决定见面' }}</text>
+					</view>
 				</view>
+				<text class="action-note">{{ actionNote }}</text>
+			</view>
 
-			<!-- 活动详情卡片 -->
 			<view class="activity-card">
-				<text class="activity-title">{{ circle.circleName }}</text>
+				<view class="section-head">
+					<text class="section-title">这局信息</text>
+					<text class="section-subtitle">先看看主题、时间和参加门槛</text>
+				</view>
 				<view class="activity-info">
 					<view class="info-item">
-						<text class="info-icon">💰</text>
+						<view class="info-icon">
+							<uni-icons type="wallet-filled" size="15" color="#7b5f48"></uni-icons>
+						</view>
 						<text class="info-text">{{ formatBudget(circle.budget || circle.money) }}</text>
 					</view>
 					<view class="info-item">
-						<text class="info-icon">👥</text>
+						<view class="info-icon">
+							<uni-icons type="staff-filled" size="15" color="#7b5f48"></uni-icons>
+						</view>
 						<text class="info-text">{{ circle.topic }}</text>
 					</view>
 					<view class="info-item">
-						<text class="info-icon">⏰</text>
+						<view class="info-icon">
+							<uni-icons type="calendar-filled" size="15" color="#7b5f48"></uni-icons>
+						</view>
 						<text class="info-text">{{ circle.slogan }}</text>
 					</view>
 				</view>
@@ -44,22 +55,25 @@
 				</view>
 				<view class="activity-location">
 					<text class="location-text">{{ circle.activityLocation }}</text>
-					<text class="location-tip">(报名后显示完整信息)</text>
+					<text class="location-tip">加入后会看到更完整的位置说明</text>
 				</view>
 			</view>
 
-			<!-- 圈子描述 -->
 			<view class="circle-desc">
-				<text class="desc-title">圈子描述</text>
 				<view class="desc-box">
-					<text class="desc-content">{{ circle.introduction }}</text>
+					<view class="section-head">
+						<text class="section-title">为什么值得来</text>
+					</view>
+					<text class="desc-content">{{ displayDescription }}</text>
 				</view>
 			</view>
 		</view>
 
-		<!-- 成员列表 -->
 		<view class="members-section" v-if="memberList.length">
-			<view class="section-title">圈子成员</view>
+			<view class="section-head">
+				<text class="section-title">这局都有谁</text>
+				<text class="section-subtitle">{{ memberSummary }}</text>
+			</view>
 			<view class="members-list">
 				<view class="member-item" v-for="member in memberList" :key="member.userId">
 					<image :src="getAvatar(member)" class="member-avatar" mode="aspectFill"></image>
@@ -69,24 +83,29 @@
 							<text class="member-tag" v-if="isOwnerMember(member)">圈主</text>
 						</view>
 						<view class="member-content">
-								<text class="member-content-text">{{memberBasicText(member)}}</text>
+								<text class="member-content-text">{{ memberBasicText(member) || '还没有补充更多介绍' }}</text>
 						</view>
 					</view>
 				</view>
 			</view>
 		</view>
 
-		<!-- 留言讨论区 -->
 		<view class="comments-section">
 			<view class="section-header">
-				<text class="section-title">留言讨论区</text>
+				<view class="section-head">
+					<text class="section-title">留言区</text>
+					<text class="section-subtitle">加入后可以在这里继续约时间、问问题</text>
+				</view>
 			</view>
 			
-			<!-- 留言输入框 -->
 			<view class="comment-input-bar" v-if="canComment" @click="showCommentModal">
 				<view class="input-placeholder">
-					<text class="placeholder-text">快发表留言吧</text>
+					<text class="placeholder-text">{{ isOwner ? '和报名的人打个招呼' : '留一句话，让大家先认识你' }}</text>
 				</view>
+			</view>
+
+			<view class="comment-guard" v-else>
+				<text class="guard-text">加入这局后才能留言。先看看成员和介绍，确定合适再加入。</text>
 			</view>
 
 			<view class="comments-list">
@@ -109,7 +128,7 @@
 				</view>
 				<!-- 空状态 -->
 				<view v-if="getComments().length === 0" class="empty-comments">
-					<text class="empty-text">暂无留言，快来发表第一条留言吧！</text>
+					<text class="empty-text">还没有人留言，等第一句开场白出现。</text>
 				</view>
 			</view>
 		</view>
@@ -125,7 +144,7 @@
 					<textarea 
 						class="comment-input" 
 						v-model="commentContent" 
-						placeholder="请输入留言内容..."
+						placeholder="写一句你想让大家先知道的话"
 						maxlength="500"
 					></textarea>
 					<view class="modal-actions">
@@ -135,6 +154,15 @@
 				</view>
 			</view>
 		</uni-popup>
+
+		<view class="bottom-action-bar">
+			<button class="action-btn bottom-action-btn"
+				:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': isParticipant, 'disabled': isActionDisabled }"
+				@click="handleAction"
+				:disabled="isActionDisabled">
+				{{ buttonText }}
+			</button>
+		</view>
 	</view>
 </template>
 
@@ -204,11 +232,11 @@
 				return Math.max(0, Number(this.circle.maxMembers || 6) - currentMembers)
 			},
 			buttonText() {
-				if (this.isOwner) return '编辑'
+				if (this.isOwner) return '编辑这局'
 				if (this.isActivityStarted) return '活动已开始'
-				if (this.isParticipant) return '退出圈子'
+				if (this.isParticipant) return '退出这局'
 				if (this.isFull) return '人数已满'
-				return '加入'
+				return '加入这局'
 			},
 			isActionDisabled() {
 				if (this.isOwner) return false
@@ -232,6 +260,43 @@
 			},
 			canComment() {
 				return this.isParticipant || this.isOwner
+			},
+			headerEyebrow() {
+				return this.isOwner ? '你发起的小局' : `${this.circle.ownerName || '有人'} · 发起的小局`
+			},
+			headerSubtitle() {
+				if (this.isActivityStarted) {
+					return '这场活动已经开始了，可以看看还有哪些人参与。'
+				}
+				if (this.isOwner) {
+					return '你可以继续完善信息、管理成员，也可以在留言区提前暖场。'
+				}
+				if (this.isParticipant) {
+					return '你已经在这局里了，现在可以在留言区继续互动。'
+				}
+				return '先看看主题、时间和成员，再决定要不要加入。'
+			},
+			displayDescription() {
+				return this.circle.introduction || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
+			},
+			memberSummary() {
+				const maxMembers = Number(this.circle.maxMembers || 6)
+				return `现在有 ${this.memberList.length} / ${maxMembers} 位成员`
+			},
+			actionNote() {
+				if (this.isActivityStarted) {
+					return '这场活动已经开始，先看看成员和留言区还留下了什么。'
+				}
+				if (this.isOwner) {
+					return '继续补充时间、地点和介绍，会更容易让想来的人下决定。'
+				}
+				if (this.isParticipant) {
+					return '你已经在这局里了，现在可以去留言区确认时间、问问题。'
+				}
+				if (this.isFull) {
+					return '这局已经满员了，先看看其他正在组的局，或者自己发起一场。'
+				}
+				return '加入后就能在留言区先打个招呼，确认时间和细节。'
 			}
 		},
 
@@ -332,15 +397,20 @@
 				return String((comment && comment.userId) || '') === String(this.circle.ownerId || '')
 			},
 			goBack() {
+				const pages = getCurrentPages()
+				if (pages.length > 1) {
+					uni.navigateBack()
+					return
+				}
 				uni.switchTab({
 					url: '/pages/circle/circle'
-				});
+				})
 			},
 			navigateToUser() {
 				const ownerId = this.circle.ownerId || (this.ownerInfo && this.ownerInfo.userId)
 				if (!ownerId) {
 					uni.showToast({
-						title: '用户信息不存在',
+						title: '暂时还找不到这位发起人',
 						icon: 'none'
 					})
 					return
@@ -374,7 +444,7 @@
 					} catch (error) {
 						console.error('获取圈子详情失败:', error)
 						uni.showToast({
-							title: '获取圈子详情失败',
+							title: '这局的信息暂时没加载出来',
 							icon: 'none'
 						})
 					}
@@ -394,11 +464,18 @@
 				})
 			},
 			async handleJoin() {
+				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (!isLoggedIn) return
+
+				if (!this.validateJoinProfile()) {
+					return
+				}
+
 				const userId = await this.userStore.getUserId()
 				const originalJoinStatus = this.circle.joinStatus
 				const nextJoinStatus = Number(originalJoinStatus) === 0 ? 1 : 0
-				const successTitle = nextJoinStatus === 1 ? '加入成功' : '已退出圈子'
-				const fallbackError = nextJoinStatus === 1 ? '加入失败' : '退出失败'
+				const successTitle = nextJoinStatus === 1 ? '你已经加入这局了' : '你已经退出这局了'
+				const fallbackError = nextJoinStatus === 1 ? '这次还没加入成功' : '这次还没退出成功'
 
 				try {
 					this.circle.joinStatus = nextJoinStatus
@@ -464,7 +541,7 @@
 				try {
 					// 显示加载提示
 					uni.showLoading({
-						title: '加载中...'
+						title: '正在准备留言...'
 					})
 					
 					// 在显示弹框前确保用户信息完整
@@ -478,7 +555,7 @@
 					uni.hideLoading()
 					console.error('获取用户信息失败:', error)
 					uni.showToast({
-						title: '获取用户信息失败，请重试',
+						title: '你的资料暂时没准备好',
 						icon: 'none'
 					})
 				}
@@ -496,7 +573,7 @@
 				try {
 					// 显示加载提示
 					uni.showLoading({
-						title: '加载中...'
+						title: '正在准备留言...'
 					})
 					
 					// 在显示弹框前确保用户信息完整
@@ -510,7 +587,7 @@
 					uni.hideLoading()
 					console.error('获取用户信息失败:', error)
 					uni.showToast({
-						title: '获取用户信息失败，请重试',
+						title: '你的资料暂时没准备好',
 						icon: 'none'
 					})
 				}
@@ -519,8 +596,8 @@
 						// 删除评论
 			async deleteComment(comment) {
 				uni.showModal({
-					title: '确认删除',
-					content: '确定要删除这条留言吗？',
+					title: '删掉这条留言？',
+					content: '删掉后就不能恢复了。',
 					success: async (res) => {
 						if (res.confirm) {
 							try {
@@ -533,25 +610,25 @@
 								}
 								
 								// 显示删除中提示
-								uni.showLoading({ title: '删除中...' })
+								uni.showLoading({ title: '正在删除...' })
 								
 								const commentData = this.buildCommentData('delete', comment.messageId)
 								const res = await circleApi.updateCircleMessage(commentData)
 								if (res.status === 10000) {
 									uni.hideLoading()
-									uni.showLoading({ title: '刷新中...' })
+									uni.showLoading({ title: '正在刷新...' })
 									const refreshSuccess = await this.refreshCircleDetail()
 									uni.hideLoading()
 									if (refreshSuccess) {
-										uni.showToast({ title: '删除成功', icon: 'success' })
+										uni.showToast({ title: '这条留言已经删掉了', icon: 'success' })
 									}
 								} else {
-									throw new Error(res.message || res.msg || '删除失败')
+									throw new Error(res.message || res.msg || '这条留言还没删掉')
 								}
 								} catch (error) {
 									uni.hideLoading()
 									console.error('删除评论失败:', error)
-									uni.showToast({ title: error.message || '删除失败', icon: 'none' })
+									uni.showToast({ title: error.message || '这条留言还没删掉', icon: 'none' })
 								}
 						}
 					}
@@ -562,11 +639,28 @@
 			validateUserInfo() {
 				const userInfo = this.userStore.userInfo
 				if (!userInfo.userName) {
-					uni.showToast({ title: '用户名称不能为空', icon: 'none' })
+					uni.showToast({ title: '先补一个昵称，再来留言', icon: 'none' })
 					return false
 				}
 				if (!toSubmittableImageBase64(userInfo.image)) {
-					uni.showToast({ title: '请重新设置头像', icon: 'none' })
+					uni.showToast({ title: '头像需要重新选一次，才能继续留言', icon: 'none' })
+					setTimeout(() => {
+						uni.navigateTo({
+							url: '/pages/profile/profileNew'
+						})
+					}, 900)
+					return false
+				}
+				return true
+			},
+
+			validateJoinProfile() {
+				const userInfo = this.userStore.userInfo || {}
+				if (!String(userInfo.userName || '').trim() || !String(userInfo.image || '').trim()) {
+					uni.showToast({
+						title: '先补昵称和头像，再加入这局',
+						icon: 'none'
+					})
 					setTimeout(() => {
 						uni.navigateTo({
 							url: '/pages/profile/profileNew'
@@ -601,7 +695,7 @@
 			// 提交评论
 			async submitComment() {
 				if (!this.commentContent.trim()) {
-					uni.showToast({ title: '请输入留言内容', icon: 'none' })
+					uni.showToast({ title: '先写一句想说的话', icon: 'none' })
 					return
 				}
 
@@ -615,7 +709,7 @@
 					}
 					
 					// 显示提交中提示
-					uni.showLoading({ title: '提交中...' })
+					uni.showLoading({ title: this.editingComment ? '正在保存...' : '正在发表...' })
 					
 					if (this.editingComment) {
 						// 编辑评论
@@ -623,14 +717,14 @@
 						const res = await circleApi.updateCircleMessage(commentData)
 						if (res.status === 10000) {
 							uni.hideLoading()
-							uni.showLoading({ title: '刷新中...' })
+							uni.showLoading({ title: '正在刷新...' })
 							const refreshSuccess = await this.refreshCircleDetail()
 							uni.hideLoading()
 							if (refreshSuccess) {
-								uni.showToast({ title: '编辑成功', icon: 'success' })
+								uni.showToast({ title: '留言已经改好了', icon: 'success' })
 							}
 						} else {
-							throw new Error(res.message || res.msg || '编辑失败')
+							throw new Error(res.message || res.msg || '这条留言还没改好')
 						}
 					} else {
 						// 新增评论
@@ -638,21 +732,21 @@
 						const res = await circleApi.updateCircleMessage(commentData)
 						if (res.status === 10000) {
 							uni.hideLoading()
-							uni.showLoading({ title: '刷新中...' })
+							uni.showLoading({ title: '正在刷新...' })
 							const refreshSuccess = await this.refreshCircleDetail()
 							uni.hideLoading()
 							if (refreshSuccess) {
-								uni.showToast({ title: '发表成功', icon: 'success' })
+								uni.showToast({ title: '留言已经发出去了', icon: 'success' })
 							}
 						} else {
-							throw new Error(res.message || res.msg || '发表失败')
+							throw new Error(res.message || res.msg || '这条留言还没发出去')
 						}
 					}
 					this.hideCommentModal()
 					} catch (error) {
 						uni.hideLoading()
 						console.error('提交评论失败:', error)
-						uni.showToast({ title: error.message || '操作失败', icon: 'none' })
+						uni.showToast({ title: error.message || '这次操作还没成功', icon: 'none' })
 					}
 			},
 
@@ -696,7 +790,7 @@
 				} catch (error) {
 					console.error('刷新圈子详情失败:', error)
 					uni.showToast({
-						title: '刷新失败，请重试',
+						title: '页面还没刷新出来',
 						icon: 'none'
 					})
 					return false
@@ -711,438 +805,12 @@
 <style lang="scss" scoped>
 	.circle-detail {
 		min-height: 100vh;
-		background-color: #fff;
-
-		.nav-header {
-			background-color: #000;
-			color: #fff;
-			padding: 44px 16px 12px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-
-			.left-btn {
-				font-size: 16px;
-			}
-
-			.header-title {
-				font-size: 18px;
-				font-weight: 500;
-			}
-
-			.user-icon {
-				.avatar {
-					width: 24px;
-					height: 24px;
-					border-radius: 12px;
-				}
-			}
-		}
-
-		.circle-info {
-			padding: 20px 16px;
-
-			.circle-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				margin-bottom: 20px;
-
-				.creator-text {
-					font-size: 16px;
-					color: #333;
-				}
-
-				.action-btn {
-					min-width: 80px;
-					font-size: 14px;
-					padding: 6px 16px;
-					border-radius: 4px;
-					margin: 0;
-
-					&.join-btn {
-						background-color: #8BC34A;
-						color: #fff;
-
-						&.joined {
-							background-color: #999;
-						}
-					}
-
-					&.edit-btn {
-						background-color: #4080ff;
-						color: #fff;
-					}
-				}
-			}
-
-			.activity-card {
-				background-color: #f8f8f8;
-				border-radius: 8px;
-				padding: 16px;
-				margin-bottom: 20px;
-
-				.activity-title {
-					font-size: 18px;
-					font-weight: 500;
-					color: #333;
-					text-align: center;
-					display: block;
-					margin-bottom: 16px;
-				}
-
-				.activity-info {
-					display: flex;
-					justify-content: space-between;
-					margin-bottom: 12px;
-
-					.info-item {
-						display: flex;
-						align-items: center;
-						gap: 4px;
-
-						.info-icon {
-							font-size: 16px;
-						}
-
-						.info-text {
-							font-size: 14px;
-							color: #666;
-						}
-					}
-				}
-
-				.activity-time {
-					margin-bottom: 8px;
-
-					.time-text {
-						font-size: 14px;
-						color: #333;
-					}
-				}
-
-				.activity-location {
-					.location-text {
-					font-size: 14px;
-						color: #333;
-						margin-right: 8px;
-					}
-
-					.location-tip {
-						font-size: 12px;
-						color: #999;
-					}
-				}
-			}
-
-			.circle-desc {
-				margin-bottom: 20px;
-
-				.desc-title {
-					font-size: 16px;
-					font-weight: 500;
-					color: #333;
-					margin-bottom: 8px;
-					display: block;
-				}
-
-				.desc-box {
-					background-color: #f5f5f5;
-					border-radius: 8px;
-					padding: 16px;
-				}
-
-				.desc-content {
-					font-size: 14px;
-					color: #666;
-					line-height: 1.6;
-				}
-			}
-		}
-
-		.members-section {
-			margin-top: 20px;
-			padding: 20px 16px;
-			background: #fff;
-			border-top: 8px solid #f5f5f5;
-
-			.section-title {
-				font-size: 16px;
-				font-weight: 500;
-				color: #333;
-				margin-bottom: 16px;
-			}
-
-			.members-list {
-				.member-item {
-					display: flex;
-					align-items: flex-start;
-					margin-bottom: 16px;
-
-					&:last-child {
-						margin-bottom: 0;
-					}
-
-					.member-avatar {
-						width: 48px;
-						height: 48px;
-						border-radius: 24px;
-						margin-right: 12px;
-					}
-
-					.member-info {
-						flex: 1;
-
-						.member-header {
-							display: flex;
-							align-items: center;
-							margin-bottom: 4px;
-
-							.member-name {
-								font-size: 16px;
-								font-weight: 500;
-								color: #333;
-								margin-right: 8px;
-							}
-
-							.member-tag {
-								font-size: 12px;
-								color: #4080ff;
-								background: rgba(64, 128, 255, 0.1);
-								padding: 2px 8px;
-								border-radius: 10px;
-							}
-						}
-						
-						.member-content{
-							flex: 1;
-							
-								.member-content-text{
-									font-size: 14px;
-									color: #666;
-									line-height: 1.4;
-								}
-							}
-					}
-				}
-			}
-		}
-
-		.comments-section {
-			margin-top: 20px;
-			padding: 20px 16px;
-			background: #fff;
-			border-top: 8px solid #f5f5f5;
-
-			.section-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				margin-bottom: 16px;
-
-				.section-title {
-					font-size: 16px;
-					font-weight: 500;
-					color: #333;
-				}
-			}
-
-			.comment-input-bar {
-				display: flex;
-				align-items: center;
-				background-color: #fff;
-				border: 1px solid #e0e0e0;
-				border-radius: 20px;
-				padding: 12px 16px;
-				margin-bottom: 16px;
-				cursor: pointer;
-				transition: all 0.2s ease;
-				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-
-				&:active {
-					background-color: #f8f8f8;
-					border-color: #8BC34A;
-					box-shadow: 0 2px 6px rgba(139, 195, 74, 0.2);
-				}
-
-				.input-placeholder {
-					flex: 1;
-
-					.placeholder-text {
-						font-size: 15px;
-						color: #666;
-						font-weight: 400;
-					}
-				}
-			}
-
-			.comments-list {
-				.comment-item {
-					display: flex;
-					align-items: flex-start;
-					margin-bottom: 16px;
-
-					&:last-child {
-						margin-bottom: 0;
-					}
-
-					.comment-avatar {
-						width: 48px;
-						height: 48px;
-						border-radius: 24px;
-						margin-right: 12px;
-					}
-
-					.comment-content {
-						flex: 1;
-
-						.comment-header {
-								display: flex;
-							align-items: center;
-							margin-bottom: 4px;
-
-							.comment-name {
-								font-size: 16px;
-								font-weight: 500;
-								color: #333;
-								margin-right: 8px;
-							}
-
-							.comment-tag {
-								font-size: 12px;
-								color: #4080ff;
-								background: rgba(64, 128, 255, 0.1);
-								padding: 2px 8px;
-								border-radius: 10px;
-							}
-						}
-
-						.comment-text {
-								font-size: 14px;
-								color: #666;
-								line-height: 1.4;
-						margin-bottom: 8px;
-					}
-
-					.comment-footer {
-						display: flex;
-						align-items: center;
-						gap: 16px;
-
-						.comment-time {
-							font-size: 12px;
-							color: #999;
-							flex-shrink: 0;
-						}
-
-						.comment-actions {
-							display: flex;
-							gap: 16px;
-
-							.action-text {
-								font-size: 12px;
-								color: #999;
-								cursor: pointer;
-
-								&:hover {
-									color: #666;
-								}
-							}
-						}
-					}
-					}
-				}
-
-				.empty-comments {
-					text-align: center;
-					padding: 40px 20px;
-
-					.empty-text {
-						font-size: 14px;
-						color: #999;
-					}
-				}
-			}
-		}
-
-		.comment-modal {
-			background-color: #fff;
-			border-radius: 16px 16px 0 0;
-			padding: 20px;
-
-			.modal-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				margin-bottom: 20px;
-
-				.modal-title {
-					font-size: 18px;
-					font-weight: 500;
-					color: #333;
-				}
-
-				.close-btn {
-					font-size: 24px;
-					color: #999;
-					cursor: pointer;
-				}
-			}
-
-			.modal-content {
-				.comment-input {
-					width: 100%;
-					height: 120px;
-					border: 1px solid #e8e8e8;
-					border-radius: 8px;
-					padding: 12px;
-					font-size: 14px;
-					margin-bottom: 20px;
-					resize: none;
-				}
-
-				.modal-actions {
-					display: flex;
-					gap: 12px;
-
-					.cancel-btn, .submit-btn {
-						flex: 1;
-						height: 44px;
-						border-radius: 22px;
-						font-size: 16px;
-						border: none;
-					}
-
-					.cancel-btn {
-						background-color: #f5f5f5;
-						color: #666;
-					}
-
-					.submit-btn {
-						background-color: #000;
-						color: #fff;
-					}
-				}
-			}
-		}
-
-		.action-btn.disabled {
-			background-color: #ccc !important;
-			color: #999 !important;
-			cursor: not-allowed;
-		}
-	}
-</style>
-
-<style lang="scss" scoped>
-	.circle-detail {
-		min-height: 100vh;
-		padding-bottom: 42px;
+		padding-bottom: 112px;
 		background:
 			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
-		color: #2f241d;
+			radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+			linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%) !important;
+		color: #30261f;
 		box-sizing: border-box;
 	}
 
@@ -1152,26 +820,26 @@
 		z-index: 10;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: calc(var(--status-bar-height) + 14px) 18px 14px;
+		gap: 8px;
+		padding: calc(var(--status-bar-height) + 10px) 16px 12px;
 		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
 		background: rgba(255, 250, 245, 0.88) !important;
-		color: #2f241d !important;
+		color: #30261f !important;
 		backdrop-filter: blur(18px);
 	}
 
 	.circle-detail .left-btn {
-		min-width: 54px;
-		height: 34px;
-		line-height: 34px;
-		padding: 0 12px;
-		border: 1px solid rgba(111, 61, 29, 0.12);
+		min-width: 52px;
+		height: 30px;
+		line-height: 30px;
+		padding: 0 10px;
+		border: 1px solid rgba(111, 61, 29, 0.1);
 		border-radius: 999px;
-		background: #fffaf5;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
-		color: #6f3d1d;
-		font-size: 13px !important;
-		font-weight: 900;
+		background: rgba(255, 255, 255, 0.72);
+		box-shadow: 0 4px 12px rgba(111, 61, 29, 0.05);
+		color: #7b5f48;
+		font-size: 12px !important;
+		font-weight: 700;
 		text-align: center;
 	}
 
@@ -1179,64 +847,106 @@
 		flex: 1;
 		min-width: 0;
 		overflow: hidden;
-		color: #2f241d !important;
+		color: #30261f !important;
 		font-size: 17px !important;
-		font-weight: 900 !important;
-		line-height: 1.35;
+		font-weight: 800 !important;
+		line-height: 30px;
 		text-align: center;
+		letter-spacing: -0.2px;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
 	.circle-detail .user-icon {
 		display: flex;
-		width: 54px;
+		width: 52px;
+		height: 30px;
+		align-items: center;
 		justify-content: flex-end;
 	}
 
 	.circle-detail .user-icon .avatar {
-		width: 34px !important;
-		height: 34px !important;
-		border-radius: 13px !important;
-		background: #f4e7dc;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.12);
+		width: 30px !important;
+		height: 30px !important;
+		border-radius: 11px !important;
+		background: #efe3d8;
+		box-shadow: 0 4px 12px rgba(111, 84, 63, 0.08);
 	}
 
 	.circle-detail .circle-info {
-		padding: 18px 18px 0 !important;
+		padding: 20px 20px 0 !important;
 	}
 
 	.circle-detail .circle-header {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		justify-content: space-between;
-		margin-bottom: 14px !important;
-		padding: 0 2px;
+		display: block;
+		margin-bottom: 18px !important;
+	}
+
+	.circle-detail .hero-copy {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.circle-detail .creator-text {
-		flex: 1;
-		min-width: 0;
-		color: #6f3d1d !important;
-		font-size: 14px !important;
+		display: block;
+		color: #7b5f48 !important;
+		font-size: 12px !important;
 		font-weight: 800;
-		line-height: 1.45;
+		letter-spacing: 0.5px;
+		line-height: 18px;
+	}
+
+	.circle-detail .hero-title {
+		display: block;
+		margin-top: 8px;
+		color: #30261f !important;
+		font-size: 24px !important;
+		font-weight: 900 !important;
+		line-height: 32px;
+		letter-spacing: -0.4px;
+	}
+
+	.circle-detail .hero-subtitle {
+		display: block;
+		margin-top: 10px;
+		color: #7d6a5c !important;
+		font-size: 14px !important;
+		line-height: 22px;
+	}
+
+	.circle-detail .decision-points {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 16px;
+	}
+
+	.circle-detail .decision-pill {
+		min-height: 28px;
+		padding: 0 10px;
+		border-radius: 999px;
+		background: rgba(140, 102, 76, 0.1);
+		color: #7b5f48;
+		font-size: 12px;
+		font-weight: 800;
+		line-height: 28px;
 	}
 
 	.circle-detail .action-btn {
-		min-width: 86px !important;
-		height: 40px !important;
-		line-height: 40px !important;
+		display: block;
+		width: 100% !important;
+		height: 54px !important;
+		line-height: 54px !important;
 		margin: 0 !important;
-		padding: 0 16px !important;
+		padding: 0 20px !important;
 		border: 0 !important;
-		border-radius: 16px !important;
-		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
-		box-shadow: 0 12px 24px rgba(111, 61, 29, 0.18);
+		border-radius: 20px !important;
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%) !important;
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.22);
 		color: #ffffff !important;
-		font-size: 14px !important;
+		font-size: 16px !important;
 		font-weight: 900;
+		text-align: center;
 	}
 
 	.circle-detail .action-btn::after,
@@ -1248,9 +958,33 @@
 	.circle-detail .action-btn.joined,
 	.circle-detail .action-btn.disabled {
 		border: 1px solid rgba(82, 49, 31, 0.1) !important;
-		background: #f3eee8 !important;
+		background: #efe7df !important;
 		box-shadow: none;
-		color: #a89a91 !important;
+		color: #ad9d90 !important;
+	}
+
+	.circle-detail .action-note {
+		display: block;
+		margin-top: 14px;
+		color: #7d6a5c;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
+	.circle-detail .bottom-action-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 20;
+		padding: 12px 20px calc(env(safe-area-inset-bottom) + 14px);
+		background: linear-gradient(180deg, rgba(247, 243, 238, 0) 0%, rgba(247, 243, 238, 0.86) 22%, rgba(247, 243, 238, 0.96) 100%);
+		backdrop-filter: blur(10px);
+		box-sizing: border-box;
+	}
+
+	.circle-detail .bottom-action-btn {
+		max-width: 100%;
 	}
 
 	.circle-detail .activity-card,
@@ -1260,100 +994,117 @@
 		border: 1px solid rgba(82, 49, 31, 0.12);
 		border-radius: 22px;
 		background: #fffaf5 !important;
-		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
 	}
 
 	.circle-detail .activity-card {
-		margin: 0 0 16px !important;
-		padding: 18px !important;
+		margin: 0 0 20px !important;
+		padding: 20px !important;
 	}
 
-	.circle-detail .activity-title {
+	.circle-detail .section-head {
+		margin-bottom: 14px;
+	}
+
+	.circle-detail .section-title {
 		display: block;
-		margin-bottom: 14px !important;
-		color: #2f241d !important;
-		font-size: 19px !important;
+		color: #30261f !important;
+		font-size: 18px !important;
 		font-weight: 900 !important;
-		line-height: 1.35;
-		text-align: left !important;
+		line-height: 26px;
+		letter-spacing: -0.2px;
+	}
+
+	.circle-detail .section-subtitle {
+		display: block;
+		margin-top: 4px;
+		color: #7d6a5c !important;
+		font-size: 13px !important;
+		line-height: 20px;
 	}
 
 	.circle-detail .activity-info {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: 10px;
 		justify-content: flex-start !important;
-		margin-bottom: 12px !important;
+		margin-bottom: 16px !important;
 	}
 
 	.circle-detail .info-item {
 		display: inline-flex;
 		align-items: center;
+		gap: 8px;
 		max-width: 100%;
-		min-height: 32px;
-		padding: 7px 10px;
+		min-height: 36px;
+		padding: 8px 12px;
 		border-radius: 999px;
-		background: #f7eadf;
-		color: #6f3d1d;
+		background: #f1e4d8;
+		color: #7b5f48;
 	}
 
-	.circle-detail .info-icon,
+	.circle-detail .info-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 15px;
+		height: 15px;
+		flex-shrink: 0;
+	}
+
 	.circle-detail .info-text {
 		font-size: 13px !important;
 		font-weight: 800;
-		color: #6f3d1d !important;
+		line-height: 20px;
+		color: #7b5f48 !important;
 	}
 
 	.circle-detail .activity-time,
 	.circle-detail .activity-location {
-		margin-top: 10px;
+		margin-top: 14px;
 	}
 
 	.circle-detail .time-text,
 	.circle-detail .location-text {
-		color: #2f241d !important;
-		font-size: 14px !important;
+		color: #30261f !important;
+		font-size: 15px !important;
 		font-weight: 700;
-		line-height: 1.5;
+		line-height: 24px;
 	}
 
 	.circle-detail .location-tip {
 		display: block;
-		margin-top: 4px;
-		color: #8a766a !important;
-		font-size: 12px !important;
+		margin-top: 6px;
+		color: #7d6a5c !important;
+		font-size: 13px !important;
+		line-height: 20px;
 	}
 
 	.circle-detail .circle-desc {
 		margin-bottom: 0 !important;
 	}
 
-	.circle-detail .desc-title,
-	.circle-detail .section-title {
-		display: block;
-		margin-bottom: 10px !important;
-		color: #2f241d !important;
-		font-size: 16px !important;
-		font-weight: 900 !important;
-	}
-
 	.circle-detail .desc-box {
-		padding: 16px !important;
+		padding: 20px !important;
 	}
 
 	.circle-detail .desc-content,
 	.circle-detail .member-content-text,
 	.circle-detail .comment-text {
-		color: #8a766a !important;
-		font-size: 14px !important;
-		line-height: 1.6 !important;
+		color: #7d6a5c !important;
+		font-size: 15px !important;
+		line-height: 24px !important;
 	}
 
 	.circle-detail .members-section,
 	.circle-detail .comments-section {
-		margin: 16px 18px 0 !important;
-		padding: 18px !important;
+		margin: 20px 20px 0 !important;
+		padding: 20px !important;
 		border-top: 1px solid rgba(82, 49, 31, 0.12) !important;
+	}
+
+	.circle-detail .section-header {
+		margin-bottom: 14px;
 	}
 
 	.circle-detail .member-item,
@@ -1361,7 +1112,7 @@
 		display: flex;
 		align-items: flex-start;
 		margin-bottom: 0 !important;
-		padding: 14px 0;
+		padding: 18px 0;
 		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
 	}
 
@@ -1373,42 +1124,82 @@
 
 	.circle-detail .member-avatar,
 	.circle-detail .comment-avatar {
-		width: 46px !important;
-		height: 46px !important;
+		width: 44px !important;
+		height: 44px !important;
 		margin-right: 12px !important;
-		border-radius: 16px !important;
-		background: #f4e7dc;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.1);
+		border-radius: 14px !important;
+		background: #efe3d8;
+		box-shadow: 0 8px 18px rgba(111, 84, 63, 0.1);
+	}
+
+	.circle-detail .member-info,
+	.circle-detail .comment-content {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.circle-detail .member-header,
+	.circle-detail .comment-header,
+	.circle-detail .comment-footer,
+	.circle-detail .comment-actions {
+		display: flex;
+		align-items: center;
+	}
+
+	.circle-detail .member-header,
+	.circle-detail .comment-header {
+		gap: 8px;
 	}
 
 	.circle-detail .member-name,
 	.circle-detail .comment-name {
-		color: #2f241d !important;
+		color: #30261f !important;
 		font-size: 15px !important;
 		font-weight: 900 !important;
+		line-height: 24px;
 	}
 
 	.circle-detail .member-tag,
 	.circle-detail .comment-tag {
-		padding: 4px 8px !important;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 22px;
+		padding: 0 8px !important;
 		border-radius: 999px !important;
-		background: #f7eadf !important;
-		color: #6f3d1d !important;
+		background: #f1e4d8 !important;
+		color: #7b5f48 !important;
 		font-size: 11px !important;
 		font-weight: 900;
+		line-height: 22px;
+		text-align: center;
+		flex-shrink: 0;
 	}
 
 	.circle-detail .comment-input-bar {
-		margin-bottom: 4px !important;
-		padding: 12px 14px !important;
+		margin-bottom: 10px !important;
+		padding: 14px 16px !important;
 		border: 1px solid rgba(82, 49, 31, 0.12) !important;
 		border-radius: 18px !important;
 		background: #ffffff !important;
 		box-shadow: none !important;
 	}
 
+	.circle-detail .comment-guard {
+		margin-bottom: 10px;
+		padding: 12px 14px;
+		border-radius: 18px;
+		background: rgba(140, 102, 76, 0.08);
+	}
+
+	.circle-detail .guard-text {
+		color: #7b5f48;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
 	.circle-detail .comment-input-bar:active {
-		border-color: rgba(156, 91, 46, 0.28) !important;
+		border-color: rgba(140, 102, 76, 0.28) !important;
 		background: #fff8f1 !important;
 	}
 
@@ -1416,7 +1207,30 @@
 	.circle-detail .comment-time,
 	.circle-detail .action-text,
 	.circle-detail .empty-text {
-		color: #8a766a !important;
+		color: #7d6a5c !important;
+	}
+
+	.circle-detail .placeholder-text,
+	.circle-detail .empty-text {
+		font-size: 14px !important;
+		line-height: 22px;
+	}
+
+	.circle-detail .comment-time,
+	.circle-detail .action-text {
+		font-size: 12px !important;
+		line-height: 18px;
+	}
+
+	.circle-detail .comment-footer {
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 10px;
+	}
+
+	.circle-detail .comment-actions {
+		gap: 12px;
+		flex-shrink: 0;
 	}
 
 	.circle-detail .comment-modal {
@@ -1426,26 +1240,28 @@
 	}
 
 	.circle-detail .modal-title {
-		color: #2f241d !important;
-		font-size: 18px !important;
+		color: #30261f !important;
+		font-size: 17px !important;
 		font-weight: 900 !important;
+		line-height: 24px;
 	}
 
 	.circle-detail .comment-input {
 		width: 100%;
-		height: 120px !important;
-		padding: 12px !important;
+		min-height: 136px !important;
+		padding: 14px !important;
 		border: 1px solid rgba(82, 49, 31, 0.12) !important;
 		border-radius: 18px !important;
 		background: #ffffff !important;
-		color: #2f241d;
-		font-size: 14px !important;
+		color: #30261f;
+		font-size: 15px !important;
+		line-height: 24px;
 	}
 
 	.circle-detail .cancel-btn,
 	.circle-detail .submit-btn {
-		height: 44px !important;
-		line-height: 44px !important;
+		height: 48px !important;
+		line-height: 48px !important;
 		border: 0 !important;
 		border-radius: 18px !important;
 		font-size: 15px !important;
@@ -1453,12 +1269,12 @@
 	}
 
 	.circle-detail .cancel-btn {
-		background: #f3eee8 !important;
-		color: #6f3d1d !important;
+		background: #efe7df !important;
+		color: #7b5f48 !important;
 	}
 
 	.circle-detail .submit-btn {
-		background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%) !important;
 		color: #ffffff !important;
 	}
 </style>

@@ -1,44 +1,55 @@
 <template>
 	<view class="user-container">
-		<!-- 顶部导航栏 -->
 		<view class="nav-header">
 			<view class="left-btn" @click="goBack">返回</view>
-			<text class="header-title">个人信息</text>
+			<text class="header-title">我的资料</text>
 			<view class="right-placeholder"></view>
 		</view>
 
-		<!-- 用户基本信息 -->
-		<view class="user-info" @click="navigateToProfileEdit">
-			<!-- 头像选择 -->
-			<button class="avatar-wrapper" @click.stop="navigateToProfileEdit">
+		<view class="profile-card" @click="navigateToProfileEdit">
+			<view class="avatar-shell">
 				<image v-if="tempUserInfo.avatar" :src="tempUserInfo.avatar" class="avatar-image" mode="aspectFill" />
 				<view v-else class="avatar-placeholder">
-					<text>头像</text>
+					<text>{{ profileInitial }}</text>
 				</view>
-			</button>
-
-			<!-- 昵称输入 -->
-			<input type="nickname" v-model="tempUserInfo.nickname"
-				:placeholder="showNicknameTip ? '请输入昵称' : defaultNickname"
-				@focus="navigateToProfileEdit"
-				class="nickname-input" :class="{ 'highlight': showNicknameTip }" />
+			</view>
+			<view class="profile-main">
+				<text class="profile-name">{{ displayName }}</text>
+				<text class="profile-subtitle">{{ profileSubtitle }}</text>
+			</view>
+			<view class="profile-action">
+				<text class="profile-action-text">{{ showNicknameTip ? '去完善' : '编辑' }}</text>
+			</view>
 		</view>
 
-		<!-- 提示信息 -->
-		<view v-if="showNicknameTip" class="tip-text">
-			请设置昵称
+		<view class="tip-banner" v-if="showNicknameTip">
+			<text>先补一个昵称和头像，别人会更容易记住你。</text>
 		</view>
 
-		<!-- 功能列表 -->
+		<view class="next-step-card">
+			<view class="next-step-copy">
+				<text class="next-step-title">{{ showNicknameTip ? '先完善资料，再去加入一局' : '资料准备好了，去看看附近在组什么局' }}</text>
+				<text class="next-step-desc">{{ showNicknameTip ? '补完整以后，别人会更容易决定要不要和你一起聊。' : '从主题、时间和距离里挑一局合适的，先留言再决定要不要见面。' }}</text>
+			</view>
+			<button class="next-step-btn" @click="handleNextStep">{{ showNicknameTip ? '去完善资料' : '去看看圈子' }}</button>
+		</view>
+
 		<view class="function-list">
+			<view class="section-title">资料与记录</view>
 			<view class="function-item" @click="navigateToProfileDetail">
-				<text>我的信息</text>
-				<uni-icons type="right" size="16" color="#999"></uni-icons>
+				<view class="function-copy">
+					<text class="function-label">查看完整资料</text>
+					<text class="function-desc">检查你对外展示的资料内容</text>
+				</view>
+				<uni-icons type="right" size="16" color="#8a766a"></uni-icons>
 			</view>
 
 			<view class="function-item" @click="handleMyCircles">
-				<text>我的圈子</text>
-				<uni-icons type="right" size="16" color="#999"></uni-icons>
+				<view class="function-copy">
+					<text class="function-label">我的圈子</text>
+					<text class="function-desc">查看我发起和加入的小局</text>
+				</view>
+				<uni-icons type="right" size="16" color="#8a766a"></uni-icons>
 			</view>
 		</view>
 	</view>
@@ -47,7 +58,7 @@
 <script>
 	import { useUserStore } from '@/store/user'
 	import { normalizeImageForDisplay } from '@/utils/image'
-	
+
 	export default {
 		setup() {
 			const userStore = useUserStore()
@@ -57,7 +68,6 @@
 		},
 		data() {
 			return {
-				defaultNickname: '用户名XXX',
 				tempUserInfo: {
 					avatar: '',
 					nickname: ''
@@ -65,11 +75,27 @@
 				showNicknameTip: false
 			}
 		},
+		computed: {
+			displayName() {
+				const nickname = String(this.tempUserInfo.nickname || '').trim()
+				return nickname || '还没设置昵称'
+			},
+			profileSubtitle() {
+				if (this.showNicknameTip) {
+					return '补充头像、昵称和基本信息，让资料更完整'
+				}
+				return '点进去可以更新头像、昵称和个人介绍'
+			},
+			profileInitial() {
+				const nickname = String(this.tempUserInfo.nickname || '').trim()
+				return nickname ? nickname.slice(0, 1) : '我'
+			}
+		},
 
 		onLoad() {
 			this.loadUserProfile()
 		},
-		onShow(){
+		onShow() {
 			this.loadUserProfile()
 		},
 
@@ -80,7 +106,6 @@
 					if (!isLoggedIn) return
 					await this.userStore.getUserDetail()
 					const userInfo = this.userStore.userInfo || {}
-					this.defaultNickname = userInfo.userName || '用户名XXX'
 					this.tempUserInfo.nickname = userInfo.userName || ''
 					this.tempUserInfo.avatar = normalizeImageForDisplay(userInfo.image)
 					this.showNicknameTip = !userInfo.userName
@@ -94,20 +119,6 @@
 				if (pages.length > 1) {
 					uni.navigateBack()
 				}
-			},
-
-			navigateTo(url) {
-				console.log('跳转到:', url)
-				uni.navigateTo({
-					url,
-					fail: (err) => {
-						console.error('跳转失败:', err)
-						uni.showToast({
-							title: '页面跳转失败',
-							icon: 'none'
-						})
-					}
-				})
 			},
 
 			handleMyCircles() {
@@ -124,19 +135,13 @@
 			},
 
 			navigateToProfileDetail() {
-				console.log('跳转到profileDetail页面')
-				// 先尝试简单的跳转
 				try {
 					uni.navigateTo({
 						url: '/pages/profile/profileDetail',
-						success: () => {
-							console.log('跳转成功')
-						},
 						fail: (err) => {
 							console.error('navigateTo失败:', err)
-							// 如果失败，尝试使用switchTab（虽然这不是tab页面）
 							uni.showToast({
-								title: '页面跳转失败，请检查页面配置',
+								title: '页面跳转失败',
 								icon: 'none'
 							})
 						}
@@ -144,10 +149,20 @@
 				} catch (error) {
 					console.error('跳转异常:', error)
 					uni.showToast({
-						title: '跳转异常',
+						title: '页面跳转失败',
 						icon: 'none'
 					})
 				}
+			},
+
+			handleNextStep() {
+				if (this.showNicknameTip) {
+					this.navigateToProfileEdit()
+					return
+				}
+				uni.switchTab({
+					url: '/pages/circle/circle'
+				})
 			}
 		}
 	}
@@ -156,252 +171,237 @@
 <style lang="scss" scoped>
 	.user-container {
 		min-height: 100vh;
-		background-color: #f8f8f8;
-
-		.nav-header {
-			background-color: #000;
-			color: #fff;
-			padding: 44px 16px 12px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-
-			.left-btn {
-				font-size: 16px;
-			}
-
-			.header-title {
-				font-size: 18px;
-				font-weight: 500;
-			}
-
-			.right-placeholder {
-				width: 32px;
-			}
-		}
-
-		.user-info {
-			background-color: #fff;
-			padding: 20px;
-			display: flex;
-			align-items: center;
-			gap: 20px;
-
-			.avatar-wrapper {
-				width: 80px;
-				height: 80px;
-				padding: 0;
-				margin: 0;
-				background: none;
-				border: 1px solid #e8e8e8;
-				border-radius: 50%;
-				overflow: hidden;
-				flex-shrink: 0;
-
-				&::after {
-					border: none;
-				}
-
-				.avatar-image {
-					width: 100%;
-					height: 100%;
-				}
-
-				.avatar-placeholder {
-					width: 100%;
-					height: 100%;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					color: #999;
-					font-size: 14px;
-				}
-			}
-
-			.nickname-input {
-				flex: 1;
-				font-size: 18px;
-				color: #333;
-				padding: 8px 0;
-				border: none;
-				background: none;
-
-				&::placeholder {
-					color: #999;
-				}
-
-				&.highlight {
-					border-bottom: 1px solid #007AFF;
-
-					&::placeholder {
-						color: #007AFF;
-					}
-				}
-			}
-		}
-
-		.function-list {
-			margin-top: 12px;
-			background-color: #fff;
-
-			.function-item {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				padding: 16px;
-				border-bottom: 1px solid #f5f5f5;
-				font-size: 16px;
-				color: #333;
-
-				&:last-child {
-					border-bottom: none;
-				}
-
-				&:active {
-					background-color: #f5f5f5;
-				}
-			}
-		}
-
-		.tip-text {
-			padding: 8px 20px;
-			font-size: 14px;
-			color: #007AFF;
-		}
-	}
-</style>
-
-<style lang="scss" scoped>
-	.user-container {
-		min-height: 100vh;
 		background:
 			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
-		color: #2f241d;
+			radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+			linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%);
+		color: #30261f;
 		box-sizing: border-box;
+		padding-bottom: 36px;
 	}
 
-	.user-container .nav-header {
+	.nav-header {
 		position: sticky;
 		top: 0;
 		z-index: 10;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+		gap: 8px;
+		padding: calc(var(--status-bar-height) + 10px) 16px 12px;
 		border-bottom: 1px solid rgba(82, 49, 31, 0.1);
-		background: rgba(255, 250, 245, 0.88) !important;
-		color: #2f241d !important;
+		background: rgba(255, 250, 245, 0.88);
 		backdrop-filter: blur(18px);
 	}
 
-	.user-container .left-btn {
-		min-width: 54px;
-		height: 34px;
-		line-height: 34px;
-		padding: 0 12px;
-		border: 1px solid rgba(111, 61, 29, 0.12);
+	.left-btn {
+		min-width: 52px;
+		height: 30px;
+		line-height: 30px;
+		padding: 0 10px;
+		border: 1px solid rgba(111, 61, 29, 0.1);
 		border-radius: 999px;
-		background: #fffaf5;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
-		color: #6f3d1d;
-		font-size: 13px !important;
-		font-weight: 900;
+		background: rgba(255, 255, 255, 0.72);
+		box-shadow: 0 4px 12px rgba(111, 61, 29, 0.05);
+		color: #7b5f48;
+		font-size: 12px;
+		font-weight: 700;
 		text-align: center;
 	}
 
-	.user-container .header-title {
+	.header-title {
 		flex: 1;
-		color: #2f241d !important;
-		font-size: 17px !important;
-		font-weight: 900 !important;
-		line-height: 1.35;
+		font-size: 17px;
+		font-weight: 800;
+		line-height: 30px;
 		text-align: center;
+		letter-spacing: -0.2px;
 	}
 
-	.user-container .right-placeholder {
-		width: 54px !important;
+	.right-placeholder {
+		width: 52px;
 	}
 
-	.user-container .user-info,
-	.user-container .function-list {
-		margin: 18px 18px 0 !important;
+	.profile-card,
+	.function-list {
+		margin: 20px 20px 0;
 		border: 1px solid rgba(82, 49, 31, 0.12);
-		border-radius: 22px;
-		background: #fffaf5 !important;
-		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+		border-radius: 24px;
+		background: rgba(255, 250, 245, 0.96);
+		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
 	}
 
-	.user-container .user-info {
-		padding: 18px !important;
+	.profile-card {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 24px 20px;
 	}
 
-	.user-container .avatar-wrapper {
-		width: 72px !important;
-		height: 72px !important;
-		border: 0 !important;
-		border-radius: 22px !important;
-		background: #f4e7dc !important;
-		box-shadow: 0 10px 22px rgba(111, 61, 29, 0.12);
+	.avatar-shell {
+		width: 76px;
+		height: 76px;
+		border-radius: 24px;
+		overflow: hidden;
+		background: linear-gradient(180deg, #efe2d7 0%, #e4d0be 100%);
+		box-shadow: 0 10px 22px rgba(111, 84, 63, 0.12);
+		flex-shrink: 0;
 	}
 
-	.user-container .avatar-wrapper::after {
-		border: none;
-	}
-
-	.user-container .avatar-image {
+	.avatar-image,
+	.avatar-placeholder {
 		width: 100%;
 		height: 100%;
 	}
 
-	.user-container .avatar-placeholder {
-		background: #f7eadf;
-		color: #8a766a !important;
-		font-size: 13px !important;
-		font-weight: 800;
+	.avatar-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #7d6a5c;
+		font-size: 28px;
+		font-weight: 900;
 	}
 
-	.user-container .nickname-input {
+	.profile-main {
+		flex: 1;
 		min-width: 0;
-		height: 44px;
-		padding: 0 !important;
-		color: #2f241d !important;
-		font-size: 20px !important;
+	}
+
+	.profile-name {
+		display: block;
+		font-size: 24px;
 		font-weight: 900;
-		line-height: 44px;
+		line-height: 32px;
+		color: #30261f;
 	}
 
-	.user-container .nickname-input.highlight {
-		border-bottom: 1px solid #9c5b2e !important;
+	.profile-subtitle {
+		display: block;
+		margin-top: 8px;
+		font-size: 13px;
+		line-height: 20px;
+		color: #7d6a5c;
 	}
 
-	.user-container .tip-text {
-		margin: 8px 18px 0;
-		padding: 0 2px !important;
-		color: #9c5b2e !important;
-		font-size: 13px !important;
+	.profile-action {
+		flex-shrink: 0;
+		padding: 9px 14px;
+		border-radius: 999px;
+		background: #fff;
+		border: 1px solid rgba(111, 61, 29, 0.12);
+	}
+
+	.profile-action-text {
+		font-size: 12px;
 		font-weight: 800;
+		color: #7b5f48;
 	}
 
-	.user-container .function-list {
-		overflow: hidden;
-		background: #fffaf5 !important;
+	.tip-banner {
+		margin: 12px 20px 0;
+		padding: 12px 14px;
+		border-radius: 16px;
+		background: rgba(140, 102, 76, 0.08);
+		color: #7b5f48;
+		font-size: 13px;
+		line-height: 20px;
 	}
 
-	.user-container .function-item {
-		padding: 18px !important;
-		border-bottom: 1px solid rgba(82, 49, 31, 0.08) !important;
-		color: #2f241d !important;
-		font-size: 15px !important;
+	.next-step-card {
+		margin: 16px 20px 0;
+		padding: 18px 20px;
+		border-radius: 22px;
+		background: linear-gradient(135deg, rgba(255, 250, 245, 0.96), rgba(249, 239, 228, 0.96));
+		border: 1px solid rgba(123, 95, 73, 0.12);
+		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
+	}
+
+	.next-step-copy {
+		min-width: 0;
+	}
+
+	.next-step-title {
+		display: block;
+		color: #30261f;
+		font-size: 16px;
 		font-weight: 900;
+		line-height: 24px;
 	}
 
-	.user-container .function-item:active {
-		background: #fff4ea !important;
+	.next-step-desc {
+		display: block;
+		margin-top: 6px;
+		color: #7d6a5c;
+		font-size: 13px;
+		line-height: 20px;
 	}
 
-	.user-container .function-item:last-child {
-		border-bottom: none !important;
+	.next-step-btn {
+		width: 100%;
+		height: 44px;
+		line-height: 44px;
+		margin: 14px 0 0;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 16px;
+		background: #4d392b;
+		color: #ffffff;
+		font-size: 14px;
+		font-weight: 900;
+
+		&::after {
+			border: none;
+		}
+	}
+
+	.function-list {
+		overflow: hidden;
+		padding: 8px 0;
+	}
+
+	.section-title {
+		padding: 12px 20px 8px;
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 1px;
+		color: #7d6a5c;
+	}
+
+	.function-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 18px 20px;
+		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
+	}
+
+	.function-item:last-child {
+		border-bottom: none;
+	}
+
+	.function-item:active {
+		background: #fff4ea;
+	}
+
+	.function-copy {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.function-label {
+		display: block;
+		font-size: 16px;
+		font-weight: 800;
+		line-height: 24px;
+		color: #30261f;
+	}
+
+	.function-desc {
+		display: block;
+		margin-top: 4px;
+		font-size: 13px;
+		line-height: 20px;
+		color: #7d6a5c;
 	}
 </style>

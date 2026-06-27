@@ -10,10 +10,11 @@
 	<!-- 用户基本信息 -->
 	<view class="user-info">
 	  <!-- 头像选择 -->
-	  <button 
+	  <button
 	    class="avatar-wrapper"
-	    open-type="chooseAvatar" 
+	    open-type="chooseAvatar"
 	    @chooseavatar="onChooseAvatar"
+	    @click="handleAvatarTap"
 	  >
 	    <image 
 	      v-if="tempUserInfo.avatar"
@@ -22,133 +23,146 @@
 	      mode="aspectFill"
 	    />
 	    <view v-else class="avatar-placeholder">
-	      <text>头像</text>
+	      <text>{{ nicknameInitial }}</text>
 	    </view>
 	  </button>
-	
-	  <!-- 昵称输入 -->
-	  <input 
-	    type="nickname"
-	    v-model="tempUserInfo.nickname"
-	    :placeholder="showNicknameTip ? '请输入昵称' : defaultNickname"
-	    @input="onNicknameInput"
-	    @change="onNicknameChange"
-	    class="nickname-input"
-	    :class="{ 'highlight': showNicknameTip }"
-	  />
+
+	  <view class="profile-copy">
+	    <text class="profile-title">{{ profileTitle }}</text>
+	    <text class="profile-caption">{{ avatarHelperText }}</text>
+	  </view>
 	</view>
 	
 	<!-- 提示信息 -->
 	<view v-if="showNicknameTip" class="tip-text">
-	  请设置昵称
+	  昵称会展示给其他人看，建议填一个容易被记住的名字。
 	</view>
 
     <!-- 表单区域 -->
-    <view class="form-section">
-      <view class="form-title">请填写基本信息</view>
-      <view class="form-tip">如实填写</view>
-      
-      <view class="form-item">
-        <text class="label">昵称<text class="required">*</text></text>
-        <input 
-          class="input" 
-          v-model="tempUserInfo.nickname" 
-          @input="onNicknameInput"
-          placeholder="默认微信名称"
-        />
+    <view class="form-stack">
+      <view class="section-card">
+        <view class="section-card-head">
+          <text class="section-card-title">基础信息</text>
+          <text class="section-card-desc">先把别人第一眼会看到的内容补完整。</text>
+        </view>
+
+        <view class="form-item">
+          <text class="label">昵称<text class="required">*</text></text>
+          <input 
+            class="input" 
+            v-model="tempUserInfo.nickname" 
+            @input="onNicknameInput"
+            @change="onNicknameChange"
+            placeholder="怎么称呼你？"
+          />
+        </view>
+
+        <view class="form-item">
+          <text class="label">出生年月<text class="required">*</text></text>
+          <picker 
+            mode="date" 
+            :value="birthdayDate"
+            @change="onBirthdayChange"
+          >
+            <view class="picker-value">
+              {{ formatBirthdayDisplay() || '请选择出生年月日' }}
+            </view>
+          </picker>
+        </view>
       </view>
 
-      <view class="form-item">
-        <text class="label">出生年月<text class="required">*</text></text>
-        <picker 
-          mode="date" 
-          :value="birthdayDate"
-          @change="onBirthdayChange"
-        >
-          <view class="picker-value">
-            {{ formatBirthdayDisplay() || '请选择出生年月日' }}
-          </view>
-        </picker>
+      <view class="section-card">
+        <view class="section-card-head">
+          <text class="section-card-title">职业信息</text>
+          <text class="section-card-desc">让别人更快判断你们聊不聊得来。</text>
+        </view>
+
+        <view class="form-item">
+          <text class="label">所在公司<text class="required">*</text></text>
+          <input 
+            class="input" 
+            v-model="formData.company" 
+            @input="onFieldInput('company', $event)"
+            placeholder="请输入公司名称"
+          />
+        </view>
+
+        <view class="form-item">
+          <text class="label">毕业院校<text class="required">*</text></text>
+          <input 
+            class="input" 
+            v-model="formData.school" 
+            @input="onFieldInput('school', $event)"
+            placeholder="请输入毕业院校"
+          />
+        </view>
+
+        <view class="form-item">
+          <text class="label">职位</text>
+          <input 
+            class="input" 
+            v-model="formData.position" 
+            @input="onFieldInput('position', $event)"
+            placeholder="请输入职位"
+          />
+        </view>
+
+        <view class="form-item">
+          <text class="label">MBTI</text>
+          <picker 
+            mode="selector" 
+            :range="mbtiOptions" 
+            :value="mbtiIndex"
+            @change="onMbtiChange"
+          >
+            <view class="picker-value">
+              {{ formData.personality || '请选择MBTI类型' }}
+            </view>
+          </picker>
+        </view>
       </view>
 
-      <view class="form-item">
-        <text class="label">所在公司<text class="required">*</text></text>
-        <input 
-          class="input" 
-          v-model="formData.company" 
-          @input="onFieldInput('company', $event)"
-          placeholder="请输入公司名称"
-        />
-      </view>
+      <view class="section-card">
+        <view class="section-card-head">
+          <text class="section-card-title">让别人先认识你</text>
+          <text class="section-card-desc">不需要写很满，但最好让人看完有印象。</text>
+        </view>
 
-      <view class="form-item">
-        <text class="label">毕业院校<text class="required">*</text></text>
-        <input 
-          class="input" 
-          v-model="formData.school" 
-          @input="onFieldInput('school', $event)"
-          placeholder="请输入毕业院校"
-        />
-      </view>
+        <view class="form-item">
+          <text class="label">自我介绍</text>
+          <textarea 
+            class="textarea" 
+		    maxlength="3000"
+            v-model="formData.introduction" 
+            @input="onFieldInput('introduction', $event)"
+            placeholder="介绍一下自己吧"
+          />
+        </view>
 
-      <view class="form-item">
-        <text class="label">职位</text>
-        <input 
-          class="input" 
-          v-model="formData.position" 
-          @input="onFieldInput('position', $event)"
-          placeholder="请输入职位"
-        />
-      </view>
+        <view class="form-item">
+          <text class="label">选择问题</text>
+          <picker 
+            mode="selector" 
+            :range="questionOptions" 
+            :value="questionIndex"
+            @change="onQuestionChange"
+          >
+            <view class="picker-value">
+              {{ formData.question || '请选择一个问题' }}
+            </view>
+          </picker>
+        </view>
 
-      <view class="form-item">
-        <text class="label">MBTI</text>
-        <picker 
-          mode="selector" 
-          :range="mbtiOptions" 
-          :value="mbtiIndex"
-          @change="onMbtiChange"
-        >
-          <view class="picker-value">
-            {{ formData.personality || '请选择MBTI类型' }}
-          </view>
-        </picker>
-      </view>
-
-      <view class="form-item">
-        <text class="label">自我介绍</text>
-        <textarea 
-          class="textarea" 
-		  maxlength="3000"
-          v-model="formData.introduction" 
-          @input="onFieldInput('introduction', $event)"
-          placeholder="介绍一下自己吧"
-        />
-      </view>
-
-      <view class="form-item">
-        <text class="label">选择问题</text>
-        <picker 
-          mode="selector" 
-          :range="questionOptions" 
-          :value="questionIndex"
-          @change="onQuestionChange"
-        >
-          <view class="picker-value">
-            {{ formData.question || '请选择一个问题' }}
-          </view>
-        </picker>
-      </view>
-
-      <view class="form-item">
-        <text class="label">我的答案</text>
-        <textarea 
-          class="textarea" 
-          maxlength="500"
-          v-model="formData.answer" 
-          @input="onFieldInput('answer', $event)"
-          placeholder="回答你选择的问题"
-        />
+        <view class="form-item">
+          <text class="label">我的答案</text>
+          <textarea 
+            class="textarea" 
+            maxlength="500"
+            v-model="formData.answer" 
+            @input="onFieldInput('answer', $event)"
+            placeholder="回答你选择的问题"
+          />
+        </view>
       </view>
     </view>
 
@@ -186,7 +200,6 @@ export default {
 
   data() {
     return {
-	  defaultNickname: '用户名XXX',
 	  tempUserInfo: {
 	    avatar: '',
 	    nickname: '',
@@ -229,37 +242,91 @@ export default {
     }
   },
 
+  computed: {
+	 nicknameInitial() {
+		const nickname = String(this.tempUserInfo.nickname || '').trim()
+		return nickname ? nickname.slice(0, 1) : '我'
+	 },
+	 profileTitle() {
+		const nickname = String(this.tempUserInfo.nickname || '').trim()
+		return nickname || '设置你的昵称'
+	 },
+	 avatarHelperText() {
+		if (this.tempUserInfo.avatar) {
+			return '点一下可以更换头像'
+		}
+		return '上传一张清晰头像，让大家更容易认出你'
+	 }
+  },
+
   onLoad() {
     this.loadUserProfile()
   },
 
   methods: {
+	  handleAvatarTap() {
+		// #ifndef MP-WEIXIN
+		this.pickAvatarImage()
+		// #endif
+	  },
+
 	  // 头像选择回调
 	  async onChooseAvatar(e) {
 	    if (e.detail.avatarUrl) {
-	      this.tempUserInfo.avatar = e.detail.avatarUrl
-	      this.tempUserInfo.avatarBase64 = ''
-	      this.showNicknameTip = true
-
-	      try {
-	        this.tempUserInfo.avatarBase64 = await this.imageToBase64(e.detail.avatarUrl)
-	      } catch (error) {
-	        console.warn('头像转 base64 失败，保存时会再次尝试:', error)
-	      }
+	      await this.applySelectedAvatar(e.detail.avatarUrl)
+	      return
 	    }
+
+		this.pickAvatarImage()
+	  },
+
+	  async pickAvatarImage() {
+		try {
+			const chooseResult = await uni.chooseImage({
+				count: 1,
+				crop: {
+					width: 600,
+					height: 600
+				},
+				sizeType: ['compressed'],
+				sourceType: ['album', 'camera']
+			})
+			const result = Array.isArray(chooseResult) ? chooseResult[1] : chooseResult
+			const filePath = result && result.tempFilePaths && result.tempFilePaths[0]
+			if (!filePath) return
+			await this.applySelectedAvatar(filePath)
+		} catch (error) {
+			if (error && String(error.errMsg || error.message || '').indexOf('cancel') !== -1) {
+				return
+			}
+			uni.showToast({
+				title: '选择头像失败',
+				icon: 'none'
+			})
+		}
+	  },
+
+	  async applySelectedAvatar(filePath) {
+		this.tempUserInfo.avatar = filePath
+		this.tempUserInfo.avatarBase64 = ''
+
+		try {
+			this.tempUserInfo.avatarBase64 = await this.avatarToBase64(filePath)
+		} catch (error) {
+			console.warn('头像转 base64 失败，保存时会再次尝试:', error)
+		}
 	  },
 	  
 	  // 昵称变更回调
 	  onNicknameInput(e) {
-	    this.tempUserInfo.nickname = e.detail.value
+	    this.tempUserInfo.nickname = (e.detail.value || '').trimStart()
+		this.showNicknameTip = !String(this.tempUserInfo.nickname || '').trim()
 	  },
 
 	  async onNicknameChange(e) {
-	    const nickname = e.detail.value
-	    if (nickname) {
-	      this.tempUserInfo.nickname = nickname
-	      this.showNicknameTip = false
-	    }
+	    const nickname = String((e.detail && e.detail.value) || '').trim()
+	    this.tempUserInfo.nickname = nickname
+	    this.showNicknameTip = !nickname
 	  },
 	  
 	  // 图片转 base64
@@ -319,11 +386,11 @@ export default {
       try {
 		const userId = await this.userStore.getUserId()
         const res = await userApi.getUserProfile(userId)
-        if (res.status === 10000 && res.data) {
-		  const profileImage = res.data.image || ''
-		  this.tempUserInfo.nickname = res.data.userName
-		  this.tempUserInfo.avatarBase64 = toSubmittableImageBase64(profileImage)
-          this.formData = {
+	        if (res.status === 10000 && res.data) {
+			  const profileImage = res.data.image || ''
+			  this.tempUserInfo.nickname = res.data.userName || ''
+			  this.tempUserInfo.avatarBase64 = toSubmittableImageBase64(profileImage)
+	          this.formData = {
             birthday: res.data.birthday || res.data.age || '', // 兼容旧数据
             company: res.data.company || '',
             position: res.data.position || '',
@@ -333,10 +400,11 @@ export default {
             question: res.data.question || '',
             answer: res.data.answer || ''
           }
-          this.isEdit = true
-          this.tempUserInfo.avatar = this.normalizeImageForDisplay(profileImage)
-		  this.tempUserInfo.nickname = res.data.userName
-          // 设置选择器的值
+	          this.isEdit = true
+	          this.tempUserInfo.avatar = this.normalizeImageForDisplay(profileImage)
+			  this.tempUserInfo.nickname = res.data.userName || ''
+			  this.showNicknameTip = !String(this.tempUserInfo.nickname || '').trim()
+	          // 设置选择器的值
           this.birthdayDate = this.convertToDateString(res.data.birthday || res.data.age)
           const mbtiIndex = this.mbtiOptions.indexOf(res.data.personality)
           const questionIndex = this.questionOptions.indexOf(res.data.question)
@@ -394,10 +462,10 @@ export default {
 			  return false
 		}
 	
-		if (!this.tempUserInfo.nickname){
-			  uni.showToast({
-				title: `请填写用户名`,
-				icon: 'none'
+			if (!String(this.tempUserInfo.nickname || '').trim()){
+				  uni.showToast({
+					title: `请填写用户名`,
+					icon: 'none'
 			  })
 			  return false
 		}
@@ -475,8 +543,8 @@ export default {
 
       this.isSaving = true
       try {
-        const userId = await this.userStore.getUserId()
-        const userName = this.tempUserInfo && this.tempUserInfo.nickname
+	        const userId = await this.userStore.getUserId()
+	        const userName = String((this.tempUserInfo && this.tempUserInfo.nickname) || '').trim()
         const image = await this.resolveProfileImageForUpdate()
         
         // 构建完整的用户信息对象，包含所有字段
@@ -533,181 +601,12 @@ export default {
 <style lang="scss" scoped>
 .profile-container {
   min-height: 100vh;
-  background-color: #fff;
-  padding-bottom: 50px;
-
-  .nav-header {
-    background-color: #000;
-    color: #fff;
-    padding: 44px 16px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .left-btn {
-      font-size: 16px;
-    }
-
-    .header-title {
-      font-size: 18px;
-      font-weight: 500;
-    }
-
-    .right-placeholder {
-      width: 32px;
-    }
-  }
-  
-  .user-info {
-    background-color: #fff;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  
-    .avatar-wrapper {
-      width: 80px;
-      height: 80px;
-      padding: 0;
-      margin: 0;
-      background: none;
-      border: 1px solid #e8e8e8;
-      border-radius: 50%;
-      overflow: hidden;
-      flex-shrink: 0;
-  
-      &::after {
-        border: none;
-      }
-  
-      .avatar-image {
-        width: 100%;
-        height: 100%;
-      }
-  
-      .avatar-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #999;
-        font-size: 14px;
-      }
-    }
-  
-    .nickname-input {
-      flex: 1;
-      font-size: 18px;
-      color: #333;
-      padding: 8px 0;
-      border: none;
-      background: none;
-  
-      &::placeholder {
-        color: #999;
-      }
-  
-      &.highlight {
-        border-bottom: 1px solid #007AFF;
-        
-        &::placeholder {
-          color: #007AFF;
-        }
-      }
-    }
-  }
-
-  .form-section {
-    padding: 20px 16px;
-
-    .form-title {
-      font-size: 16px;
-      color: #333;
-      margin-bottom: 8px;
-    }
-
-    .form-tip {
-      font-size: 12px;
-      color: #999;
-      margin-bottom: 20px;
-    }
-
-    .form-item {
-      margin-bottom: 20px;
-
-      .label {
-        display: block;
-        font-size: 16px;
-        color: #333;
-        margin-bottom: 8px;
-
-        .required {
-          color: #ff4d4f;
-          margin-left: 4px;
-        }
-      }
-
-      .input, .picker-value {
-        width: 100%;
-        height: 44px;
-        border: 1px solid #e8e8e8;
-        border-radius: 4px;
-        padding: 0 12px;
-        font-size: 14px;
-        background-color: #fff;
-        box-sizing: border-box;
-      }
-
-      .picker-value {
-        line-height: 44px;
-        color: #333;
-      }
-
-      .textarea {
-        width: 100%;
-        height: 120px;
-        border: 1px solid #e8e8e8;
-        border-radius: 4px;
-        padding: 12px;
-        font-size: 14px;
-        resize: none;
-        box-sizing: border-box;
-      }
-    }
-  }
-
-  .save-btn {
-    position: fixed;
-    bottom: 34px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    height: 44px;
-    line-height: 44px;
-    background-color: #000;
-    color: #fff;
-    font-size: 16px;
-    border-radius: 22px;
-    text-align: center;
-
-    &:disabled {
-      opacity: 0.5;
-      background-color: #ccc;
-    }
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-.profile-container {
-  min-height: 100vh;
   padding-bottom: 112px !important;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-    linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%) !important;
-  color: #2f241d;
+    radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+    linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%) !important;
+  color: #30261f;
   box-sizing: border-box;
 }
 
@@ -717,62 +616,71 @@ export default {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: calc(var(--status-bar-height) + 14px) 18px 14px !important;
+  gap: 8px;
+  padding: calc(var(--status-bar-height) + 10px) 16px 12px !important;
   border-bottom: 1px solid rgba(82, 49, 31, 0.1);
   background: rgba(255, 250, 245, 0.88) !important;
-  color: #2f241d !important;
+  color: #30261f !important;
   backdrop-filter: blur(18px);
 }
 
 .profile-container .left-btn {
-  min-width: 54px;
-  height: 34px;
-  line-height: 34px;
-  padding: 0 12px;
-  border: 1px solid rgba(111, 61, 29, 0.12);
+  min-width: 52px;
+  height: 30px;
+  line-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(111, 61, 29, 0.1);
   border-radius: 999px;
-  background: #fffaf5;
-  box-shadow: 0 8px 18px rgba(111, 61, 29, 0.08);
-  color: #6f3d1d;
-  font-size: 13px !important;
-  font-weight: 900;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4px 12px rgba(111, 61, 29, 0.05);
+  color: #7b5f48;
+  font-size: 12px !important;
+  font-weight: 700;
   text-align: center;
 }
 
 .profile-container .header-title {
   flex: 1;
-  color: #2f241d !important;
+  color: #30261f !important;
   font-size: 17px !important;
-  font-weight: 900 !important;
-  line-height: 1.35;
+  font-weight: 800 !important;
+  line-height: 30px;
   text-align: center;
+  letter-spacing: -0.2px;
 }
 
 .profile-container .right-placeholder {
-  width: 54px !important;
+  width: 52px !important;
 }
 
 .profile-container .user-info,
-.profile-container .form-section {
-  margin: 18px 18px 0 !important;
+.profile-container .section-card {
+  margin: 20px 20px 0 !important;
   border: 1px solid rgba(82, 49, 31, 0.12);
   border-radius: 22px;
   background: #fffaf5 !important;
-  box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+  box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
 }
 
 .profile-container .user-info {
-  padding: 18px !important;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px !important;
 }
 
 .profile-container .avatar-wrapper {
-  width: 72px !important;
-  height: 72px !important;
+  width: 76px !important;
+  height: 76px !important;
   border: 0 !important;
-  border-radius: 22px !important;
-  background: #f4e7dc !important;
-  box-shadow: 0 10px 22px rgba(111, 61, 29, 0.12);
+  border-radius: 24px !important;
+  background: #efe3d8 !important;
+  box-shadow: 0 10px 22px rgba(111, 84, 63, 0.12);
+  overflow: hidden !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-container .avatar-wrapper::after,
@@ -780,56 +688,87 @@ export default {
   border: none;
 }
 
+.profile-container .avatar-image,
 .profile-container .avatar-placeholder {
-  background: #f7eadf;
-  color: #8a766a !important;
-  font-size: 13px !important;
-  font-weight: 800;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.profile-container .nickname-input {
-  min-width: 0;
-  height: 44px;
-  padding: 0 !important;
-  color: #2f241d !important;
-  font-size: 20px !important;
+.profile-container .avatar-placeholder {
+  background: #f1e4d8;
+  color: #7d6a5c !important;
+  font-size: 28px !important;
   font-weight: 900;
-  line-height: 44px;
 }
 
-.profile-container .nickname-input.highlight {
-  border-bottom: 1px solid #9c5b2e !important;
+.profile-container .profile-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-container .profile-title {
+  display: block;
+  color: #30261f !important;
+  font-size: 24px !important;
+  font-weight: 900;
+  line-height: 32px;
+}
+
+.profile-container .profile-caption {
+  display: block;
+  margin-top: 8px;
+  color: #7d6a5c !important;
+  font-size: 13px !important;
+  line-height: 20px;
 }
 
 .profile-container .tip-text {
-  margin: 8px 18px 0;
+  margin: 10px 20px 0;
   padding: 0 2px;
-  color: #9c5b2e !important;
+  color: #8c664c !important;
   font-size: 13px;
   font-weight: 800;
+  line-height: 20px;
 }
 
-.profile-container .form-section {
-  padding: 18px !important;
+.profile-container .form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.profile-container .form-title {
-  margin-bottom: 4px !important;
-  color: #2f241d !important;
-  font-size: 17px !important;
+.profile-container .section-card {
+  padding: 20px !important;
+  overflow: hidden;
+}
+
+.profile-container .section-card-head {
+  margin-bottom: 18px;
+}
+
+.profile-container .section-card-title {
+  display: block;
+  color: #30261f !important;
+  font-size: 18px !important;
   font-weight: 900;
-  line-height: 1.35;
+  line-height: 26px;
 }
 
-.profile-container .form-tip {
-  margin-bottom: 18px !important;
-  color: #8a766a !important;
+.profile-container .section-card-desc {
+  display: block;
+  margin-top: 6px;
+  color: #7d6a5c !important;
   font-size: 13px !important;
-  line-height: 1.45;
+  line-height: 20px;
 }
 
 .profile-container .form-item {
-  margin-bottom: 18px !important;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 20px !important;
 }
 
 .profile-container .form-item:last-child {
@@ -838,27 +777,31 @@ export default {
 
 .profile-container .label {
   display: block;
-  margin-bottom: 8px !important;
-  color: #2f241d !important;
-  font-size: 14px !important;
+  margin-bottom: 10px !important;
+  color: #30261f !important;
+  font-size: 15px !important;
   font-weight: 900;
-  line-height: 1.4;
+  line-height: 22px;
 }
 
 .profile-container .required {
-  color: #9c5b2e !important;
+  color: #8c664c !important;
 }
 
 .profile-container .input,
 .profile-container .picker-value,
 .profile-container .textarea {
+  display: block;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid rgba(82, 49, 31, 0.12) !important;
   border-radius: 18px !important;
   background: #ffffff !important;
-  color: #2f241d !important;
+  color: #30261f !important;
   font-size: 14px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-sizing: border-box;
 }
 
 .profile-container .input,
@@ -866,27 +809,36 @@ export default {
   height: 48px !important;
   line-height: 48px !important;
   padding: 0 14px !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-container .textarea {
-  min-height: 132px !important;
-  padding: 12px 14px !important;
-  line-height: 1.6;
+  min-height: 136px !important;
+  padding: 14px !important;
+  font-size: 15px !important;
+  font-weight: 500;
+  line-height: 24px;
+  overflow: hidden;
+  resize: none;
 }
 
 .profile-container .save-btn {
   position: fixed;
-  right: 18px;
+  right: 20px;
   bottom: 34px;
-  left: 18px !important;
+  left: 20px !important;
   width: auto !important;
   height: 48px !important;
   line-height: 48px !important;
   transform: none !important;
   border: 0 !important;
   border-radius: 18px !important;
-  background: linear-gradient(135deg, #9c5b2e, #6f3d1d) !important;
-  box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+  background: linear-gradient(135deg, #8c664c 0%, #72513b 100%) !important;
+  box-shadow: 0 14px 26px rgba(94, 70, 52, 0.18);
   color: #ffffff !important;
   font-size: 15px !important;
   font-weight: 900;
@@ -894,9 +846,9 @@ export default {
 
 .profile-container .save-btn-disabled {
   border: 1px solid rgba(82, 49, 31, 0.1) !important;
-  background: #f3eee8 !important;
+  background: #efe7df !important;
   box-shadow: none;
-  color: #a89a91 !important;
+  color: #ad9d90 !important;
   opacity: 1 !important;
 }
 </style>

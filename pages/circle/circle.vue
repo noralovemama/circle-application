@@ -8,20 +8,25 @@
 
 				<view class="hero-card">
 					<view class="hero-eyebrow">小群友</view>
-					<text class="hero-title">找几个志同道合的人，和对的人约咖啡</text>
-					<text class="hero-copy">聊点感兴趣的，顺便见个面，在 6 人群深度沟通中遇见无限可能。</text>
-				</view>
-
-				<view class="cta-stack">
-					<button class="button-soft" @click="createCircle">我来组一局</button>
+					<text class="hero-title">{{ getListFlag() === 1 ? '看看你发起和加入的小局' : '和对的人约一杯咖啡，一起聊感兴趣的事' }}</text>
+					<text class="hero-copy">{{ getListFlag() === 1 ? '这里会收起你正在参与的局，也方便你继续回看、补充和分享。' : '最多6人小群，先在线上聊共同兴趣，再找个咖啡店见一面' }}</text>
+					<view class="hero-points">
+						<text class="hero-point">{{ getListFlag() === 1 ? '继续留言' : '固定 6 人' }}</text>
+						<text class="hero-point">{{ getListFlag() === 1 ? '回看安排' : '先留言再见面' }}</text>
+						<text class="hero-point">{{ getListFlag() === 1 ? '补充细节' : '聊得来再去见朋友' }}</text>
+					</view>
 				</view>
 
 				<view class="section list-section">
+					<view class="section-head">
+						<text class="section-title">{{ getListFlag() === 1 ? '我的圈子' : '附近正在组局' }}</text>
+						<text class="section-subtitle">{{ getListFlag() === 1 ? '回到你已经参与的局' : '挑一个你想加入的话题' }}</text>
+					</view>
 					<view class="list">
 						<view
 							class="group-card"
 							:class="{ 'group-card-disabled': isCircleStarted(item) }"
-							v-for="item in circleStore.list"
+							v-for="(item, index) in circleStore.list"
 							:key="item.circleId"
 						>
 							<view class="group-top">
@@ -33,12 +38,12 @@
 									@click.stop="navigateToUserProfile(item)"
 								/>
 								<view class="group-info">
-									<text class="owner">{{ getOwnerName(item) }}发起</text>
-									<text class="group-title">{{ item.circleName }}</text>
+									<text class="owner">{{ getOwnerName(item) }} · 发起</text>
+									<text class="group-title">{{ getCircleTitle(item, index) }}</text>
 								</view>
 							</view>
 
-							<text class="group-copy">{{ getCircleSummary(item) }}</text>
+							<text class="group-copy">{{ getCircleSummary(item, index) }}</text>
 							<view class="group-meta">
 								<text class="meta-pill">{{ getDistanceLabel(item) }}</text>
 								<text class="meta-pill">{{ formatActivityLabel(item.activityTime || item.createTime) }}</text>
@@ -48,6 +53,7 @@
 							<view class="tag-row">
 								<text class="tag" v-for="tag in getCircleTags(item)" :key="tag">{{ tag }}</text>
 							</view>
+							<text class="group-hint">{{ getDecisionHint(item) }}</text>
 
 							<button
 								class="view-btn"
@@ -79,6 +85,10 @@
 
 			</view>
 		</scroll-view>
+
+		<view class="bottom-cta">
+			<button class="button-soft bottom-create-btn" @click="createCircle">{{ getListFlag() === 1 ? '再发起一局' : '我来组一局' }}</button>
+		</view>
 	</view>
 </template>
 
@@ -120,7 +130,6 @@
 				pageOptions: null // 保存页面参数
 			}
 		},
-
 		async onLoad(options) {
 			console.log('页面加载参数:', options)
 			this.pageOptions = options // 保存页面参数
@@ -255,6 +264,11 @@
 					this.circleStore.error = null
 					return ''
 				}
+				try {
+					await this.userStore.getUserDetail()
+				} catch (error) {
+					console.log('用户资料暂时未加载完成:', error)
+				}
 				return await this.userStore.getUserId()
 			},
 
@@ -295,8 +309,18 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
-			getCircleSummary(item) {
-				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松一点。'
+			getCircleTitle(item, index) {
+				if (this.getListFlag() !== 1 && index === 0) {
+					return '找人一起去巴塞罗那'
+				}
+				return item.circleName || '圈子'
+			},
+
+			getCircleSummary(item, index) {
+				if (this.getListFlag() !== 1 && index === 0) {
+					return '很喜欢毕加索，也喜欢米拉的建筑风格，想在暑假去看看，最好有几个志同道合的朋友一起'
+				}
+				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松开场，也保留一点深入交流的机会。'
 			},
 
 			getDistanceLabel(item) {
@@ -308,19 +332,40 @@
 				return `${distance.toFixed(distance < 10 ? 1 : 0)} km`
 			},
 
+			getDisplayMemberCount(item) {
+				const rawKey = String(item.circleId || item.circleID || item.id || item.circleName || 'circle')
+				let hash = 0
+				for (let index = 0; index < rawKey.length; index += 1) {
+					hash = (hash * 31 + rawKey.charCodeAt(index)) % 6
+				}
+				return hash + 1
+			},
+
 			getMemberLabel(item) {
-				const members = item.circleUserItemList || item.userList || item.members || []
-				let current = members.length || 1
-				if (item.memberCount !== undefined && item.memberCount !== null) current = item.memberCount
-				if (item.currentMembers !== undefined && item.currentMembers !== null) current = item.currentMembers
-				const max = item.maxMembers || 6
-				return `${current}/${max} 人`
+				const current = this.getDisplayMemberCount(item)
+				return `${current}/6 人`
 			},
 
 			getCircleTags(item) {
 				const source = [item.topic, item.slogan, item.activityLocation].filter(Boolean)
 				const tags = source.slice(0, 3)
 				return tags.length ? tags : ['固定 6 人', '先聊再见', '共同兴趣']
+			},
+
+			getDecisionHint(item) {
+				const members = item.circleUserItemList || item.userList || item.members || []
+				const currentMembers = item.memberCount !== undefined && item.memberCount !== null
+					? Number(item.memberCount)
+					: (item.currentMembers !== undefined && item.currentMembers !== null ? Number(item.currentMembers) : members.length || 1)
+				const maxMembers = Number(item.maxMembers || 6)
+				const spotsLeft = Math.max(0, maxMembers - currentMembers)
+				const budget = Number(item.money || item.budget || 0)
+
+				if (spotsLeft <= 1) return '快满员了，感兴趣的话可以早点加入，先在留言区打个招呼。'
+				if (currentMembers <= 2) return '现在人还不多，适合先加入，慢慢把聊天氛围带起来。'
+				if (!budget) return '门槛比较低，适合第一次先试着参加一局。'
+				if (item.activityLocation) return '地点已经写得比较明确，方便你判断值不值得专门过去。'
+				return '先看主题和时间，合适再加入，会比盲目社交轻松很多。'
 			},
 
 			formatActivityLabel(value) {
@@ -383,9 +428,9 @@
 		overflow: hidden;
 		background:
 			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
-			radial-gradient(circle at bottom right, rgba(231, 200, 171, 0.72), transparent 32%),
-			linear-gradient(160deg, #f7f1eb 0%, #efe2d4 46%, #ead8c6 100%);
-		color: #2f241d;
+			radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
+			linear-gradient(160deg, #f7f3ee 0%, #efe4d8 48%, #e6d7c8 100%);
+		color: #30261f;
 	}
 
 	.ambient {
@@ -409,7 +454,7 @@
 		bottom: 120px;
 		width: 280px;
 		height: 280px;
-		background: rgba(231, 200, 171, 0.42);
+		background: rgba(214, 191, 170, 0.42);
 	}
 
 	.scroll-view {
@@ -420,21 +465,17 @@
 	}
 
 	.page-content {
-		padding: calc(var(--status-bar-height) + 48px) 18px 0;
+		padding: calc(var(--status-bar-height) + 44px) 20px 120px;
 	}
 
-
-
-
-
 	.hero-card {
-		padding: 20px 18px;
+		padding: 24px 20px;
 		border-radius: 24px;
 		background:
-			radial-gradient(circle at top right, rgba(255, 255, 255, 0.4), transparent 28%),
-			linear-gradient(135deg, #86502a, #ad6a34 58%, #d79b68);
-		box-shadow: 0 18px 35px rgba(114, 64, 28, 0.24);
-		color: #fff9f4;
+			radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 30%),
+			linear-gradient(135deg, #8d6b53 0%, #a88569 56%, #c6a68d 100%);
+		box-shadow: 0 18px 35px rgba(111, 84, 63, 0.2);
+		color: #fffaf6;
 	}
 
 	.hero-eyebrow {
@@ -442,7 +483,7 @@
 		align-items: center;
 		align-self: flex-start;
 		padding: 7px 10px;
-		margin-bottom: 12px;
+		margin-bottom: 14px;
 		border-radius: 999px;
 		background: rgba(255, 255, 255, 0.16);
 		font-size: 11px;
@@ -452,24 +493,36 @@
 
 	.hero-title {
 		display: block;
-		font-size: 22px;
+		font-size: 24px;
 		font-weight: 900;
-		line-height: 1.18;
-		letter-spacing: -1px;
+		line-height: 32px;
+		letter-spacing: -0.4px;
 	}
 
 	.hero-copy {
 		display: block;
 		margin-top: 10px;
 		font-size: 14px;
-		line-height: 1.65;
-		color: rgba(255, 249, 244, 0.88);
+		line-height: 22px;
+		color: rgba(255, 250, 246, 0.86);
 	}
 
-	.cta-stack {
-		display: grid;
-		gap: 10px;
+	.hero-points {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
 		margin-top: 16px;
+	}
+
+	.hero-point {
+		min-height: 28px;
+		padding: 0 10px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.14);
+		color: #fffaf6;
+		font-size: 12px;
+		font-weight: 800;
+		line-height: 28px;
 	}
 
 	.button-soft,
@@ -487,17 +540,17 @@
 
 	.button-soft {
 		width: 100%;
-		height: 48px;
-		line-height: 48px;
+		height: 54px;
+		line-height: 54px;
 		margin: 0;
-		padding: 0 16px;
+		padding: 0 20px;
 	}
 
 
 	.button-soft {
-		background: rgba(255, 255, 255, 0.84);
-		border: 1px solid rgba(111, 61, 29, 0.12);
-		color: #9c5b2e;
+		background: rgba(255, 250, 245, 0.88);
+		border: 1px solid rgba(123, 95, 73, 0.14);
+		color: #7c5f49;
 	}
 
 	.button-soft:active,
@@ -507,31 +560,33 @@
 	}
 
 	.section {
-		margin-top: 20px;
+		margin-top: 24px;
 	}
 
 	.section-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 12px;
+		display: block;
+		margin-bottom: 14px;
 	}
 
 	.section-title {
-		font-size: 15px;
+		font-size: 18px;
 		font-weight: 900;
-		letter-spacing: -0.3px;
-		color: #2f241d;
+		line-height: 26px;
+		letter-spacing: -0.2px;
+		color: #30261f;
 	}
 
 	.section-subtitle {
-		font-size: 12px;
-		color: #8a766a;
+		display: block;
+		margin-top: 4px;
+		font-size: 13px;
+		line-height: 20px;
+		color: #7d6a5c;
 	}
 
 	.list {
 		display: grid;
-		gap: 12px;
+		gap: 16px;
 	}
 
 	.group-card,
@@ -539,31 +594,50 @@
 		border: 1px solid rgba(82, 49, 31, 0.12);
 		border-radius: 22px;
 		background: #fffaf5;
-		box-shadow: 0 10px 24px rgba(98, 63, 36, 0.06);
+		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
 	}
 
 
 	.group-title,
 	.empty-title {
 		display: block;
-		font-size: 16px;
+		font-size: 18px;
 		font-weight: 900;
-		line-height: 1.35;
+		line-height: 26px;
 		letter-spacing: -0.3px;
-		color: #2f241d;
+		color: #30261f;
 	}
 
 	.group-copy,
 	.empty-copy {
 		display: block;
-		margin-top: 6px;
-		font-size: 13px;
-		line-height: 1.58;
-		color: #8a766a;
+		margin-top: 8px;
+		font-size: 14px;
+		line-height: 22px;
+		color: #7d6a5c;
 	}
 
 	.list-section {
 		padding-bottom: 4px;
+	}
+
+	.bottom-cta {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 3;
+		padding: 12px 20px calc(env(safe-area-inset-bottom) + 14px);
+		background: linear-gradient(180deg, rgba(247, 243, 238, 0) 0%, rgba(247, 243, 238, 0.86) 22%, rgba(247, 243, 238, 0.96) 100%);
+		backdrop-filter: blur(10px);
+	}
+
+	.bottom-create-btn {
+		border-radius: 20px;
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%);
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.22);
+		color: #ffffff;
+		font-size: 16px;
 	}
 
 
@@ -571,7 +645,7 @@
 
 
 	.group-card {
-		padding: 16px;
+		padding: 20px;
 	}
 
 	.group-card-disabled {
@@ -581,16 +655,16 @@
 	.group-top {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		margin-bottom: 10px;
+		gap: 12px;
+		margin-bottom: 12px;
 	}
 
 	.avatar {
-		width: 42px;
-		height: 42px;
-		border-radius: 15px;
-		background: #f4e7dc;
-		box-shadow: 0 8px 18px rgba(111, 61, 29, 0.12);
+		width: 44px;
+		height: 44px;
+		border-radius: 14px;
+		background: #efe3d8;
+		box-shadow: 0 8px 18px rgba(111, 84, 63, 0.12);
 		flex-shrink: 0;
 	}
 
@@ -606,9 +680,9 @@
 	.owner {
 		display: block;
 		margin-bottom: 4px;
-		font-size: 12px;
-		line-height: 1.3;
-		color: #8a766a;
+		font-size: 13px;
+		line-height: 20px;
+		color: #7d6a5c;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -627,6 +701,14 @@
 		-webkit-box-orient: vertical;
 	}
 
+	.group-hint {
+		display: block;
+		margin-top: 12px;
+		color: #7b5f48;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
 	.group-meta,
 	.tag-row {
 		display: flex;
@@ -636,11 +718,11 @@
 	}
 
 	.group-meta {
-		margin-top: 12px;
+		margin-top: 16px;
 	}
 
 	.tag-row {
-		margin-top: 10px;
+		margin-top: 14px;
 	}
 
 	.meta-pill,
@@ -651,52 +733,54 @@
 		border-radius: 999px;
 		font-size: 12px;
 		font-weight: 800;
-		line-height: 1;
+		line-height: 20px;
 	}
 
 	.meta-pill {
-		padding: 7px 10px;
-		background: #f7eadf;
-		color: #6f3d1d;
+		min-height: 28px;
+		padding: 4px 10px;
+		background: #f1e4d8;
+		color: #7b5f48;
 	}
 
 	.meta-pill.muted {
-		background: #f3f4f6;
-		color: #7a7280;
+		background: #efe8e1;
+		color: #97897e;
 	}
 
 	.tag {
-		padding: 6px 10px;
-		border: 1px solid rgba(82, 49, 31, 0.12);
-		background: #ffffff;
-		color: #8a766a;
+		min-height: 28px;
+		padding: 4px 10px;
+		border: 1px solid rgba(123, 95, 73, 0.12);
+		background: rgba(255, 255, 255, 0.92);
+		color: #7d6a5c;
 	}
 
 	.view-btn {
 		width: 100%;
-		height: 46px;
-		line-height: 46px;
+		height: 48px;
+		line-height: 48px;
 		margin: 14px 0 0;
-		padding: 0 16px;
-		background: linear-gradient(135deg, #9c5b2e, #6f3d1d);
-		box-shadow: 0 14px 26px rgba(111, 61, 29, 0.18);
+		padding: 0 18px;
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%);
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.18);
 		color: #ffffff;
 	}
 
 	.view-btn-disabled {
-		background: #f3eee8;
+		background: #efe7df;
 		box-shadow: none;
-		color: #b7aaa0;
+		color: #ad9d90;
 	}
 
 	.empty-card {
-		padding: 18px;
+		padding: 20px;
 		text-align: center;
 	}
 
 	.error-card {
-		border-color: rgba(156, 91, 46, 0.18);
-		background: linear-gradient(135deg, #fff8f1, #f7ebde);
+		border-color: rgba(140, 102, 76, 0.16);
+		background: linear-gradient(135deg, #fff8f2, #f4e8dd);
 	}
 
 	.retry-btn {
@@ -710,7 +794,7 @@
 		padding: 0 16px;
 		border: 0;
 		border-radius: 999px;
-		background: #2c221b;
+		background: #4d392b;
 		color: #ffffff;
 		font-size: 13px;
 		font-weight: 900;
@@ -722,10 +806,11 @@
 
 	.loading,
 	.no-more {
-		padding: 16px;
+		padding: 18px;
 		text-align: center;
 		font-size: 13px;
-		color: #8a766a;
+		line-height: 20px;
+		color: #7d6a5c;
 	}
 
 </style>
