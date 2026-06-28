@@ -22,12 +22,6 @@
 						<text class="decision-pill">{{ isActivityStarted ? '已经开局' : '先聊再决定见面' }}</text>
 					</view>
 				</view>
-				<button class="action-btn"
-					:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': isParticipant, 'disabled': isActionDisabled }"
-					@click="handleAction"
-					:disabled="isActionDisabled">
-					{{ buttonText }}
-				</button>
 				<text class="action-note">{{ actionNote }}</text>
 			</view>
 
@@ -160,6 +154,15 @@
 				</view>
 			</view>
 		</uni-popup>
+
+		<view class="bottom-action-bar">
+			<button class="action-btn bottom-action-btn"
+				:class="{ 'edit-btn': isOwner, 'join-btn': !isOwner, 'joined': isParticipant, 'disabled': isActionDisabled }"
+				@click="handleAction"
+				:disabled="isActionDisabled">
+				{{ buttonText }}
+			</button>
+		</view>
 	</view>
 </template>
 
@@ -802,7 +805,7 @@
 <style lang="scss" scoped>
 	.circle-detail {
 		min-height: 100vh;
-		padding-bottom: 44px;
+		padding-bottom: 112px;
 		background:
 			radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
 			radial-gradient(circle at bottom right, rgba(216, 194, 174, 0.68), transparent 34%),
@@ -932,16 +935,16 @@
 	.circle-detail .action-btn {
 		display: block;
 		width: 100% !important;
-		height: 48px !important;
-		line-height: 48px !important;
-		margin: 18px 0 0 !important;
-		padding: 0 18px !important;
+		height: 54px !important;
+		line-height: 54px !important;
+		margin: 0 !important;
+		padding: 0 20px !important;
 		border: 0 !important;
-		border-radius: 16px !important;
+		border-radius: 20px !important;
 		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%) !important;
-		box-shadow: 0 12px 24px rgba(94, 70, 52, 0.18);
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.22);
 		color: #ffffff !important;
-		font-size: 15px !important;
+		font-size: 16px !important;
 		font-weight: 900;
 		text-align: center;
 	}
@@ -962,10 +965,26 @@
 
 	.circle-detail .action-note {
 		display: block;
-		margin-top: 10px;
+		margin-top: 14px;
 		color: #7d6a5c;
 		font-size: 13px;
 		line-height: 20px;
+	}
+
+	.circle-detail .bottom-action-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 20;
+		padding: 12px 20px calc(env(safe-area-inset-bottom) + 14px);
+		background: linear-gradient(180deg, rgba(247, 243, 238, 0) 0%, rgba(247, 243, 238, 0.86) 22%, rgba(247, 243, 238, 0.96) 100%);
+		backdrop-filter: blur(10px);
+		box-sizing: border-box;
+	}
+
+	.circle-detail .bottom-action-btn {
+		max-width: 100%;
 	}
 
 	.circle-detail .activity-card,

@@ -4,7 +4,7 @@ const getCircleDetail = (params) => {
   const { circleId } = params
   
   return {
-    code: 0,
+    status: 10000,
     message: 'success',
     data: {
       circleId: circleId,

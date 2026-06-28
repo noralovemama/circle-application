@@ -13,9 +13,9 @@ const mockUserProfile = {
 }
 
 // 获取用户信息
-export const getUserProfile = () => {
+export const getUserProfile = (params = {}) => {
   return {
-    code: 0,
+    status: 10000,
     message: 'success',
     data: mockUserProfile
   }
@@ -24,7 +24,7 @@ export const getUserProfile = () => {
 // 创建用户信息
 export const createProfile = (params) => {
   return {
-    code: 0,
+    status: 10000,
     message: 'success',
     data: {
       ...mockUserProfile,
@@ -37,12 +37,14 @@ export const createProfile = (params) => {
 // 更新用户信息
 export const updateProfile = (params) => {
   return {
-    code: 0,
+    status: 10000,
     message: 'success',
     data: {
       ...mockUserProfile,
+      userName: params && params.userName ? params.userName : mockUserProfile.nickname,
+      image: params && params.image ? params.image : mockUserProfile.avatar,
       ...params,
       updateTime: Date.now()
     }
   }
-} 
+}

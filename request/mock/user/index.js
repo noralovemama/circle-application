@@ -1,17 +1,19 @@
 // 模拟用户相关接口
 export const login = async (data) => {
-  const { phone, code } = data
+  const { phoneNumber, validateCode, code } = data || {}
   
   return {
     status: 10000,
     message: 'success',
     data: {
       openId: `user_${Date.now()}`,
+      userId: `user_${Date.now()}`,
       expireAt: Math.floor(Date.now() / 1000) + 7200,
       userInfo: {
-        phone,
-        nickname: '测试用户',
-        avatar: ''
+        phoneNumber,
+        validateCode,
+        userName: '测试用户',
+        image: ''
       }
     }
   }
@@ -29,4 +31,4 @@ export const sendCode = async (data) => {
     message: 'success',
     data: Date.now().toString()
   }
-} 
+}

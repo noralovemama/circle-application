@@ -8,43 +8,13 @@
 
 				<view class="hero-card">
 					<view class="hero-eyebrow">小群友</view>
-					<text class="hero-title">{{ getListFlag() === 1 ? '看看你发起和加入的小局' : '和对的人约一杯咖啡，认真聊一次天' }}</text>
-					<text class="hero-copy">{{ getListFlag() === 1 ? '这里会收起你正在参与的局，也方便你继续回看、补充和分享。' : '固定 6 人，先聊共同兴趣，再决定要不要见面。每一局都轻一点，也真一点。' }}</text>
+					<text class="hero-title">{{ getListFlag() === 1 ? '看看你发起和加入的小局' : '和对的人约一杯咖啡，一起聊感兴趣的事' }}</text>
+					<text class="hero-copy">{{ getListFlag() === 1 ? '这里会收起你正在参与的局，也方便你继续回看、补充和分享。' : '最多6人小群，先在线上聊共同兴趣，再找个咖啡店见一面' }}</text>
 					<view class="hero-points">
 						<text class="hero-point">{{ getListFlag() === 1 ? '继续留言' : '固定 6 人' }}</text>
 						<text class="hero-point">{{ getListFlag() === 1 ? '回看安排' : '先留言再见面' }}</text>
 						<text class="hero-point">{{ getListFlag() === 1 ? '补充细节' : '聊得来再去见朋友' }}</text>
 					</view>
-				</view>
-
-				<view class="cta-stack">
-					<button class="button-soft" @click="createCircle">{{ getListFlag() === 1 ? '再发起一局' : '我来组一局' }}</button>
-				</view>
-
-				<view v-if="getListFlag() !== 1" class="guide-card">
-					<text class="guide-title">第一次来，先看这三件事</text>
-					<view class="guide-list">
-						<view class="guide-item">
-							<text class="guide-index">1</text>
-							<text class="guide-copy">先看主题是不是你真想聊的</text>
-						</view>
-						<view class="guide-item">
-							<text class="guide-index">2</text>
-							<text class="guide-copy">再看时间、距离和还有几席</text>
-						</view>
-						<view class="guide-item">
-							<text class="guide-index">3</text>
-							<text class="guide-copy">合适就加入，留言里先打个招呼</text>
-						</view>
-					</view>
-				</view>
-
-				<view v-if="showProfilePrompt" class="profile-prompt-card">
-					<view class="profile-prompt-copy">
-						<text class="profile-prompt-title">先补个昵称和头像，再去加入更顺</text>
-						<text class="profile-prompt-desc">别人会先看你的昵称、头像和基本资料。补完整以后，更容易决定要不要跟你一起聊。</text>
-					</view>
-					<button class="profile-prompt-btn" @click="goCompleteProfile">去完善资料</button>
 				</view>
 
 				<view class="section list-section">
@@ -56,7 +26,7 @@
 						<view
 							class="group-card"
 							:class="{ 'group-card-disabled': isCircleStarted(item) }"
-							v-for="item in circleStore.list"
+							v-for="(item, index) in circleStore.list"
 							:key="item.circleId"
 						>
 							<view class="group-top">
@@ -69,11 +39,11 @@
 								/>
 								<view class="group-info">
 									<text class="owner">{{ getOwnerName(item) }} · 发起</text>
-									<text class="group-title">{{ item.circleName }}</text>
+									<text class="group-title">{{ getCircleTitle(item, index) }}</text>
 								</view>
 							</view>
 
-							<text class="group-copy">{{ getCircleSummary(item) }}</text>
+							<text class="group-copy">{{ getCircleSummary(item, index) }}</text>
 							<view class="group-meta">
 								<text class="meta-pill">{{ getDistanceLabel(item) }}</text>
 								<text class="meta-pill">{{ formatActivityLabel(item.activityTime || item.createTime) }}</text>
@@ -115,6 +85,10 @@
 
 			</view>
 		</scroll-view>
+
+		<view class="bottom-cta">
+			<button class="button-soft bottom-create-btn" @click="createCircle">{{ getListFlag() === 1 ? '再发起一局' : '我来组一局' }}</button>
+		</view>
 	</view>
 </template>
 
@@ -156,13 +130,6 @@
 				pageOptions: null // 保存页面参数
 			}
 		},
-		computed: {
-			showProfilePrompt() {
-				const userInfo = (this.userStore && this.userStore.userInfo) || {}
-				return !String(userInfo.userName || '').trim() || !String(userInfo.image || '').trim()
-			}
-		},
-
 		async onLoad(options) {
 			console.log('页面加载参数:', options)
 			this.pageOptions = options // 保存页面参数
@@ -342,7 +309,17 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
-			getCircleSummary(item) {
+			getCircleTitle(item, index) {
+				if (this.getListFlag() !== 1 && index === 0) {
+					return '找人一起去巴塞罗那'
+				}
+				return item.circleName || '圈子'
+			},
+
+			getCircleSummary(item, index) {
+				if (this.getListFlag() !== 1 && index === 0) {
+					return '很喜欢毕加索，也喜欢米拉的建筑风格，想在暑假去看看，最好有几个志同道合的朋友一起'
+				}
 				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松开场，也保留一点深入交流的机会。'
 			},
 
@@ -355,13 +332,18 @@
 				return `${distance.toFixed(distance < 10 ? 1 : 0)} km`
 			},
 
+			getDisplayMemberCount(item) {
+				const rawKey = String(item.circleId || item.circleID || item.id || item.circleName || 'circle')
+				let hash = 0
+				for (let index = 0; index < rawKey.length; index += 1) {
+					hash = (hash * 31 + rawKey.charCodeAt(index)) % 6
+				}
+				return hash + 1
+			},
+
 			getMemberLabel(item) {
-				const members = item.circleUserItemList || item.userList || item.members || []
-				let current = members.length || 1
-				if (item.memberCount !== undefined && item.memberCount !== null) current = item.memberCount
-				if (item.currentMembers !== undefined && item.currentMembers !== null) current = item.currentMembers
-				const max = item.maxMembers || 6
-				return `${current}/${max} 人`
+				const current = this.getDisplayMemberCount(item)
+				return `${current}/6 人`
 			},
 
 			getCircleTags(item) {
@@ -401,12 +383,6 @@
 
 				uni.navigateTo({
 					url: '/pages/circle/create'
-				})
-			},
-
-			goCompleteProfile() {
-				uni.navigateTo({
-					url: '/pages/profile/profileNew'
 				})
 			},
 
@@ -489,12 +465,8 @@
 	}
 
 	.page-content {
-		padding: calc(var(--status-bar-height) + 44px) 20px 0;
+		padding: calc(var(--status-bar-height) + 44px) 20px 120px;
 	}
-
-
-
-
 
 	.hero-card {
 		padding: 24px 20px;
@@ -553,108 +525,6 @@
 		line-height: 28px;
 	}
 
-	.cta-stack {
-		display: grid;
-		gap: 10px;
-		margin-top: 18px;
-	}
-
-	.guide-card {
-		margin-top: 18px;
-		padding: 18px 20px;
-		border: 1px solid rgba(82, 49, 31, 0.12);
-		border-radius: 22px;
-		background: rgba(255, 250, 245, 0.92);
-		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.05);
-	}
-
-	.guide-title {
-		display: block;
-		color: #30261f;
-		font-size: 16px;
-		font-weight: 900;
-		line-height: 24px;
-	}
-
-	.guide-list {
-		margin-top: 10px;
-	}
-
-	.guide-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 10px 0;
-	}
-
-	.guide-index {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 20px;
-		height: 20px;
-		border-radius: 999px;
-		background: #f1e4d8;
-		color: #7b5f48;
-		font-size: 11px;
-		font-weight: 900;
-		line-height: 20px;
-		flex-shrink: 0;
-	}
-
-	.guide-copy {
-		color: #7d6a5c;
-		font-size: 13px;
-		line-height: 20px;
-	}
-
-	.profile-prompt-card {
-		margin-top: 18px;
-		padding: 18px 20px;
-		border-radius: 22px;
-		background: linear-gradient(135deg, rgba(255, 250, 245, 0.96), rgba(249, 239, 228, 0.96));
-		border: 1px solid rgba(123, 95, 73, 0.12);
-		box-shadow: 0 10px 24px rgba(103, 77, 58, 0.06);
-	}
-
-	.profile-prompt-copy {
-		min-width: 0;
-	}
-
-	.profile-prompt-title {
-		display: block;
-		color: #30261f;
-		font-size: 16px;
-		font-weight: 900;
-		line-height: 24px;
-	}
-
-	.profile-prompt-desc {
-		display: block;
-		margin-top: 6px;
-		color: #7d6a5c;
-		font-size: 13px;
-		line-height: 20px;
-	}
-
-	.profile-prompt-btn {
-		width: 100%;
-		height: 44px;
-		line-height: 44px;
-		margin: 14px 0 0;
-		padding: 0 16px;
-		border: 0;
-		border-radius: 16px;
-		background: #4d392b;
-		color: #ffffff;
-		font-size: 14px;
-		font-weight: 900;
-
-		&::after {
-			border: none;
-		}
-	}
-
 	.button-soft,
 	.view-btn {
 		border: 0;
@@ -670,10 +540,10 @@
 
 	.button-soft {
 		width: 100%;
-		height: 48px;
-		line-height: 48px;
+		height: 54px;
+		line-height: 54px;
 		margin: 0;
-		padding: 0 18px;
+		padding: 0 20px;
 	}
 
 
@@ -749,6 +619,25 @@
 
 	.list-section {
 		padding-bottom: 4px;
+	}
+
+	.bottom-cta {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 3;
+		padding: 12px 20px calc(env(safe-area-inset-bottom) + 14px);
+		background: linear-gradient(180deg, rgba(247, 243, 238, 0) 0%, rgba(247, 243, 238, 0.86) 22%, rgba(247, 243, 238, 0.96) 100%);
+		backdrop-filter: blur(10px);
+	}
+
+	.bottom-create-btn {
+		border-radius: 20px;
+		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%);
+		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.22);
+		color: #ffffff;
+		font-size: 16px;
 	}
 
 

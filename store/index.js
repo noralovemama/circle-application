@@ -2,6 +2,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 // import user from './modules/user.js'
+import config from '@/request/config'
 
 Vue.use(Vuex)
 
@@ -109,6 +110,19 @@ const store = createStore({
 				if (state.openid) {
 					resolve(state.openid)
 				} else {
+					// 微信开发者工具本地 mock 调试时，避免再触发 uni.login 超时
+					// #ifdef MP-WEIXIN
+					try {
+						const systemInfo = uni.getSystemInfoSync()
+						if (config.mock && config.mock.enabled && systemInfo && systemInfo.platform === 'devtools') {
+							const openid = 'mock_openid_devtools'
+							commit('login')
+							commit('setOpenid', openid)
+							resolve(openid)
+							return
+						}
+					} catch (error) {}
+					// #endif
 					uni.login({
 						success: (data) => {
 							commit('login')

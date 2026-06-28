@@ -8,6 +8,19 @@ const normalizeUrl = (url = '') => String(url).replace(/^\/+/, '').split('?')[0]
 
 const shouldAttachUserToken = (url = '') => AUTH_FREE_URLS.indexOf(normalizeUrl(url)) === -1
 
+const shouldUseDevMock = () => {
+  // #ifdef MP-WEIXIN
+  try {
+    const systemInfo = uni.getSystemInfoSync()
+    return !!(config.mock && config.mock.enabled && systemInfo && systemInfo.platform === 'devtools')
+  } catch (error) {
+    return !!(config.mock && config.mock.enabled)
+  }
+  // #endif
+
+  return false
+}
+
 const getErrorMessage = (error, fallback = '网络请求失败') => {
   if (!error) return fallback
   if (typeof error === 'string') return error
@@ -101,11 +114,11 @@ const requestByCallback = (requestOptions, requestStartTime) => {
 // 创建请求拦截器
 const request = async (options) => {
   const { url, method = 'GET', data, mock = false, timeout } = options
+  const useMock = mock || shouldUseDevMock()
 
-  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock })
+  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock: useMock })
 
-  // 强制开启 mock
-  if (mock) {
+  if (useMock) {
     try {
       console.log('[Mock] 开始查找 mock 函数:', url)
       const result = await findMockFunction(url, data)
