@@ -34,10 +34,10 @@ export const generateMockList = (params = {}) => {
   })
   
   return {
-    status: 10000,
+    code: 0,
     message: 'success',
     data: {
-      circlePageItemList: list,
+      records: list,
       total: totalCount,
       size: size,
       current: current
@@ -56,10 +56,10 @@ export const page = (params) => {
   if (current < 1 || size < 1) {
     console.error('[Mock] 参数错误:', { current, size })
     return {
-      status: 10001,
+      code: -1,
       message: '参数错误',
       data: {
-        circlePageItemList: [],
+        records: [],
         total: 0,
         size: size,
         current: current

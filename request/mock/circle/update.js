@@ -5,7 +5,7 @@ export const updateCircle = (data) => {
   // 模拟更新成功
   if (Math.random() > 0.1) { // 90% 成功率
     return {
-      status: 10000,
+      code: 0,
       message: 'success',
       data: {
         circleId: data.circleId,
