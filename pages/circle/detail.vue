@@ -390,58 +390,6 @@
 			getCommentAvatar(comment) {
 				return normalizeImageForDisplay(comment && comment.userImage, '/static/default-avatar.png')
 			},
-			getMockComments() {
-				const seatLimit = Math.max(0, Number(this.remainingSpots || 0))
-				if (seatLimit <= 0) return []
-
-				const profilePool = this.memberList
-					.filter(member => member && String(member.userId || '') !== String(this.circle.ownerId || ''))
-					.map(member => ({
-						userId: member.userId,
-						userName: member.userName,
-						userImage: member.image || ''
-					}))
-				const fallbackPool = [
-					{ userId: 'mock-user-1', userName: 'Mia', userImage: '' },
-					{ userId: 'mock-user-2', userName: '阿泽', userImage: '' },
-					{ userId: 'mock-user-3', userName: 'Luna', userImage: '' }
-				]
-				const activeProfiles = (profilePool.length ? profilePool : fallbackPool).slice(0, Math.min(seatLimit, Math.max(profilePool.length, fallbackPool.length)))
-				if (activeProfiles.length === 0) return []
-
-				const topic = this.circle.topic || this.circle.circleName || '这个局'
-				const location = this.circle.activityLocation || '市中心附近'
-				const activityTime = this.formatActivityTime(this.circle.activityTime)
-				const lines = [
-					`我对 ${topic} 这条线挺感兴趣的，如果最后真能聊到线下见面就更好了。`,
-					`我也想来，时间看着还可以。地点如果定在 ${location} 一带，我下班过去不会太赶。`,
-					`我比较想知道大家会从什么角度聊，偏分享经历还是偏交换信息？`,
-					`我更希望气氛轻一点，别像硬社交局。先在线上熟一熟，再约 ${activityTime} 见面我能接受。`,
-					`如果这局最后确定成行，我可以提前做一点资料或者路线功课，见面时会更好聊。`
-				]
-
-				const speakerOrderByCount = {
-					1: [0, 0, 0],
-					2: [0, 1, 0, 1],
-					3: [0, 1, 2, 0, 1]
-				}
-				const speakerOrder = speakerOrderByCount[activeProfiles.length] || [0, 1, 2, 3, 0]
-				const timeList = ['今天 19:12', '今天 19:18', '今天 19:24', '今天 19:31', '今天 19:37']
-
-				return speakerOrder.map((speakerIndex, index) => {
-					const profile = activeProfiles[speakerIndex]
-					return {
-						messageId: `mock-comment-${index + 1}`,
-						userId: profile.userId,
-						userName: profile.userName,
-						userImage: profile.userImage || '',
-						content: lines[index],
-						createTime: timeList[index] || `今天 19:${12 + index * 6}`,
-						status: 1,
-						isMock: true
-					}
-				})
-			},
 			isOwnerMember(member) {
 				return Number(member && member.ownerFlag) === 1
 			},
@@ -473,6 +421,10 @@
 			},
 			
 			async loadCircleDetail(options, longitude, latitude){
+				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (!isLoggedIn) {
+					return
+				}
 				this.userId = await this.userStore.getUserId()
 				if (options && options.circleId) {
 					// 先用路由参数设置基本信息
@@ -518,6 +470,8 @@
 			async handleJoin() {
 				const isLoggedIn = await this.userStore.checkLoginStatus()
 				if (!isLoggedIn) return
+
+				await this.userStore.ensureUserInfo()
 
 				if (!this.validateJoinProfile()) {
 					return
@@ -809,17 +763,14 @@
 				
 				if (Array.isArray(messageList)) {
 					// 过滤掉已删除的留言（如果有status字段），并按时间排序
-					const filteredComments = messageList
+					return messageList
 						.filter(comment => {
 							// 如果没有status字段，默认显示；如果有status字段且为1，则显示
 							return !comment.hasOwnProperty('status') || comment.status === 1
 						})
 						.sort((a, b) => new Date(a.createTime) - new Date(b.createTime))
-					if (filteredComments.length > 0) {
-						return filteredComments
-					}
 				}
-				return this.getMockComments()
+				return []
 			},
 
 			// 检查是否可以管理评论
@@ -829,13 +780,11 @@
 
 			// 检查是否可以编辑评论（只能编辑自己的评论）
 			canEditComment(comment) {
-				if (comment && comment.isMock) return false
 				return String(comment.userId || '') === String(this.userId || '')
 			},
 
 			// 检查是否可以删除评论（圈主可以删除任何评论，参与者只能删除自己的评论）
 			canDeleteComment(comment) {
-				if (comment && comment.isMock) return false
 				return this.isOwner || String(comment.userId || '') === String(this.userId || '')
 			},
 

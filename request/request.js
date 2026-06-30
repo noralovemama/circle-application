@@ -8,19 +8,6 @@ const normalizeUrl = (url = '') => String(url).replace(/^\/+/, '').split('?')[0]
 
 const shouldAttachUserToken = (url = '') => AUTH_FREE_URLS.indexOf(normalizeUrl(url)) === -1
 
-const shouldUseDevMock = () => {
-  // #ifdef MP-WEIXIN
-  try {
-    const systemInfo = uni.getSystemInfoSync()
-    return !!(config.mock && config.mock.enabled && systemInfo && systemInfo.platform === 'devtools')
-  } catch (error) {
-    return !!(config.mock && config.mock.enabled)
-  }
-  // #endif
-
-  return false
-}
-
 const getErrorMessage = (error, fallback = '网络请求失败') => {
   if (!error) return fallback
   if (typeof error === 'string') return error
@@ -114,7 +101,7 @@ const requestByCallback = (requestOptions, requestStartTime) => {
 // 创建请求拦截器
 const request = async (options) => {
   const { url, method = 'GET', data, mock = false, timeout } = options
-  const useMock = mock || shouldUseDevMock()
+  const useMock = !!mock
 
   console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock: useMock })
 
@@ -143,7 +130,7 @@ const request = async (options) => {
     const token = uni.getStorageSync('token') || ''
     const openId = uni.getStorageSync('openId') || token
     const expireAt = uni.getStorageSync('expireAt') || ''
-    const attachUserToken = shouldAttachUserToken(url) && !!openId
+    const attachUserToken = shouldAttachUserToken(url) && !!openId && !!expireAt
     const header = {
       'Content-Type': 'application/json'
     }

@@ -158,14 +158,10 @@ export default {
 
     async loadUserProfile() {
       try {
-        let userId
-        if (this.targetUserId) {
-          userId = this.targetUserId
-        } else {
-          const isLoggedIn = await this.userStore.checkLoginStatus()
-          if (!isLoggedIn) return
-          userId = await this.userStore.getUserId()
-        }
+        const isLoggedIn = await this.userStore.checkLoginStatus()
+        if (!isLoggedIn) return
+
+        const userId = this.targetUserId || await this.userStore.getUserId()
 
         const res = await userApi.getUserProfile(userId)
         if (res.status === 10000 && res.data) {

@@ -89,13 +89,6 @@
         {{ isLoggingIn ? '登录中...' : '登录去看看' }}
       </button>
 
-      <button
-        v-if="shouldUseDevMockLogin()"
-        class="dev-enter-btn"
-        @click="enterWithDevMock"
-      >
-        开发调试：直接进入首页
-      </button>
     </view>
   </view>
 </template>
@@ -103,7 +96,6 @@
 <script>
 import { useUserStore } from '@/store/user'
 import { userApi } from '@/request/api'
-import config from '@/request/config'
 
 export default {
   setup() {
@@ -125,19 +117,6 @@ export default {
     }
   },
   methods: {
-    shouldUseDevMockLogin() {
-      // #ifdef MP-WEIXIN
-      try {
-        const systemInfo = uni.getSystemInfoSync()
-        return !!(config.mock && config.mock.enabled && systemInfo && systemInfo.platform === 'devtools')
-      } catch (error) {
-        return !!(config.mock && config.mock.enabled)
-      }
-      // #endif
-
-      return false
-    },
-
     validatePhone(e) {
       if (e && e.detail) {
         this.phone = e.detail.value
@@ -191,14 +170,9 @@ export default {
 
       this.isLoggingIn = true
       try {
-        let code = ''
-        if (this.shouldUseDevMockLogin()) {
-          code = `mock-code-${Date.now()}`
-        } else {
-          const loginResult = await uni.login()
-          const loginData = Array.isArray(loginResult) ? loginResult[1] : loginResult
-          code = loginData && loginData.code
-        }
+        const loginResult = await uni.login()
+        const loginData = Array.isArray(loginResult) ? loginResult[1] : loginResult
+        const code = loginData && loginData.code
 
         if (!code) {
           throw new Error('登录校验没有拿到，请再试一次')
@@ -255,28 +229,6 @@ export default {
 
     getErrorMessage(error, fallback) {
       return this.getRawErrorMessage(error, fallback)
-    },
-
-    async enterWithDevMock() {
-      if (!this.shouldUseDevMockLogin()) return
-
-      const expireAt = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
-      await this.userStore.setTokenInfo({
-        token: 'mock-token-devtools',
-        openId: 'mock-openid-devtools',
-        userId: 'mock-user-001',
-        expireAt
-      })
-
-      try {
-        await this.userStore.getUserDetail()
-      } catch (error) {
-        console.log('开发调试模式获取用户详情失败，继续进入首页:', error)
-      }
-
-      uni.switchTab({
-        url: '/pages/circle/circle'
-      })
     },
 
   }
@@ -513,24 +465,6 @@ export default {
       &:not(.active) {
         box-shadow: none;
       }
-
-      &::after {
-        border: none;
-      }
-    }
-
-    .dev-enter-btn {
-      width: 100%;
-      height: 88rpx;
-      line-height: 88rpx;
-      text-align: center;
-      margin: 18rpx 0 0;
-      border: 2rpx dashed rgba(123, 95, 72, 0.28);
-      border-radius: 28rpx;
-      background: rgba(255, 255, 255, 0.72);
-      color: #7b5f48;
-      font-size: 28rpx;
-      font-weight: 800;
 
       &::after {
         border: none;

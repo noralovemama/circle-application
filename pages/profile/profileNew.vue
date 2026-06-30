@@ -384,6 +384,8 @@ export default {
 
     async loadUserProfile() {
       try {
+		const isLoggedIn = await this.userStore.checkLoginStatus()
+		if (!isLoggedIn) return
 		const userId = await this.userStore.getUserId()
         const res = await userApi.getUserProfile(userId)
 	        if (res.status === 10000 && res.data) {

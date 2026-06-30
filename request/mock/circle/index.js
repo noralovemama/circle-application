@@ -13,26 +13,6 @@ export const generateMockList = (params = {}) => {
     const id = startIndex + i
     if (id >= totalCount) break // 如果超过总数据量就停止
 
-    if (id === 0) {
-      list.push({
-        circleId: 'circle_barcelona',
-        circleName: '找人一起去巴塞罗那',
-        ownerId: 'user_mia',
-        ownerName: 'Mia',
-        ownerImage: '/static/default-avatar.png',
-        avatar: '/static/default-avatar.png',
-        memberCount: 3,
-        topic: '巴塞罗那建筑与艺术',
-        slogan: '想找能一起暴走看高迪和毕加索的人',
-        introduction: '很喜欢毕加索，也喜欢米拉的建筑风格，想在暑假去看看，最好有几个志同道合的朋友一起。',
-        activityLocation: '先线上聊，见面前再约咖啡店',
-        activityTime: '2026-07-12 19:30',
-        distance: '4.2',
-        createTime: '2026-06-27 19:00'
-      })
-      continue
-    }
-
     list.push({
       circleId: `circle_${id}`,
       circleName: `圈子${id + 1}`,
