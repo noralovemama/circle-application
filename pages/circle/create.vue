@@ -232,9 +232,14 @@
 			},
 			async loadUserProfile() {
 				try {
+					const isLoggedIn = await this.userStore.checkLoginStatus()
+					if (!isLoggedIn) {
+						return false
+					}
+
 					// 确保用户信息完整
 					await this.userStore.ensureUserInfo()
-					
+
 					// 验证用户信息是否完整
 					const userInfo = this.userStore.userInfo
 					if (!userInfo.userName || !userInfo.image) {

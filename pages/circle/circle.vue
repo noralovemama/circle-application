@@ -309,17 +309,11 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
-			getCircleTitle(item, index) {
-				if (this.getListFlag() !== 1 && index === 0) {
-					return '找人一起去巴塞罗那'
-				}
+			getCircleTitle(item) {
 				return item.circleName || '圈子'
 			},
 
-			getCircleSummary(item, index) {
-				if (this.getListFlag() !== 1 && index === 0) {
-					return '很喜欢毕加索，也喜欢米拉的建筑风格，想在暑假去看看，最好有几个志同道合的朋友一起'
-				}
+			getCircleSummary(item) {
 				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松开场，也保留一点深入交流的机会。'
 			},
 
@@ -332,18 +326,13 @@
 				return `${distance.toFixed(distance < 10 ? 1 : 0)} km`
 			},
 
-			getDisplayMemberCount(item) {
-				const rawKey = String(item.circleId || item.circleID || item.id || item.circleName || 'circle')
-				let hash = 0
-				for (let index = 0; index < rawKey.length; index += 1) {
-					hash = (hash * 31 + rawKey.charCodeAt(index)) % 6
-				}
-				return hash + 1
-			},
-
 			getMemberLabel(item) {
-				const current = this.getDisplayMemberCount(item)
-				return `${current}/6 人`
+				const members = item.circleUserItemList || item.userList || item.members || []
+				let current = members.length || 1
+				if (item.memberCount !== undefined && item.memberCount !== null) current = item.memberCount
+				if (item.currentMembers !== undefined && item.currentMembers !== null) current = item.currentMembers
+				const normalizedCurrent = Math.max(1, Math.min(6, Number(current) || 1))
+				return `${normalizedCurrent}/6 人`
 			},
 
 			getCircleTags(item) {

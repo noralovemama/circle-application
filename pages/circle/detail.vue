@@ -421,6 +421,10 @@
 			},
 			
 			async loadCircleDetail(options, longitude, latitude){
+				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (!isLoggedIn) {
+					return
+				}
 				this.userId = await this.userStore.getUserId()
 				if (options && options.circleId) {
 					// 先用路由参数设置基本信息
@@ -466,6 +470,8 @@
 			async handleJoin() {
 				const isLoggedIn = await this.userStore.checkLoginStatus()
 				if (!isLoggedIn) return
+
+				await this.userStore.ensureUserInfo()
 
 				if (!this.validateJoinProfile()) {
 					return

@@ -101,11 +101,11 @@ const requestByCallback = (requestOptions, requestStartTime) => {
 // 创建请求拦截器
 const request = async (options) => {
   const { url, method = 'GET', data, mock = false, timeout } = options
+  const useMock = !!mock
 
-  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock })
+  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock: useMock })
 
-  // 强制开启 mock
-  if (mock) {
+  if (useMock) {
     try {
       console.log('[Mock] 开始查找 mock 函数:', url)
       const result = await findMockFunction(url, data)
@@ -130,7 +130,7 @@ const request = async (options) => {
     const token = uni.getStorageSync('token') || ''
     const openId = uni.getStorageSync('openId') || token
     const expireAt = uni.getStorageSync('expireAt') || ''
-    const attachUserToken = shouldAttachUserToken(url) && !!openId
+    const attachUserToken = shouldAttachUserToken(url) && !!openId && !!expireAt
     const header = {
       'Content-Type': 'application/json'
     }

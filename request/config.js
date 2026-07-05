@@ -4,7 +4,7 @@ export default {
   timeout: 10000,
   loginTimeout: 60000,
   mock: {
-    enabled: true,
+    enabled: false,
     timeout: 100
   }
 } 

@@ -88,6 +88,7 @@
       >
         {{ isLoggingIn ? '登录中...' : '登录去看看' }}
       </button>
+
     </view>
   </view>
 </template>
@@ -172,6 +173,7 @@ export default {
         const loginResult = await uni.login()
         const loginData = Array.isArray(loginResult) ? loginResult[1] : loginResult
         const code = loginData && loginData.code
+
         if (!code) {
           throw new Error('登录校验没有拿到，请再试一次')
         }
