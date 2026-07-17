@@ -280,16 +280,6 @@
 				}, 900)
 			},
 			async loadCircleData() {
-				// #ifdef MP-WEIXIN
-				if (uni.getSystemInfoSync().platform === 'devtools') {
-					console.log('模拟器环境，使用默认位置信息')
-					const longitude = 116.24145697699653
-					const latitude = 39.93208468967014
-					await this.loadCircleDataReal(longitude, latitude)
-					return
-				}
-				// #endif
-
 				uni.getLocation({
 					type: 'gcj02',
 					success: async ({
@@ -299,8 +289,12 @@
 						await this.loadCircleDataReal(longitude, latitude)
 					},
 					fail: (err) => {
-						console.error('获取位置失败，使用默认位置加载圈子详情：', err)
-						this.loadCircleDataReal(116.24145697699653, 39.93208468967014)
+						console.error('获取位置失败，按无定位参数加载真实圈子详情：', err)
+						uni.showToast({
+							title: '未获取到定位，先加载真实详情',
+							icon: 'none'
+						})
+						this.loadCircleDataReal('', '')
 					}
 				})
 
@@ -361,18 +355,10 @@
 					},
 					fail: (err) => {
 						console.error('选择位置失败：', err)
-						if (process.env.NODE_ENV === 'development') {
-							const mockLocation = {
-								name: '杭州市西湖区黄龙时代广场',
-								address: '浙江省杭州市西湖区黄龙时代广场B座',
-								latitude: 30.274085,
-								longitude: 120.13802
-							}
-							this.formData.location = mockLocation.address
-							this.formData.address = mockLocation.address
-							this.formData.latitude = mockLocation.latitude
-							this.formData.longitude = mockLocation.longitude
-						}
+						uni.showToast({
+							title: '没有选到真实地点',
+							icon: 'none'
+						})
 					}
 				})
 			},

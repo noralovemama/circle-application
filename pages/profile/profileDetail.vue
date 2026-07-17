@@ -109,9 +109,9 @@ export default {
     },
     heroSubtitle() {
       if (this.targetUserId) {
-        return '看看对方留下了哪些个人信息'
+        return '先看看对方写了什么，再决定要不要认识'
       }
-      return '这是别人看到你的资料页面'
+      return '这是别人决定要不要认识你的第一眼'
     },
     basicInfoItems() {
       return [
@@ -158,10 +158,14 @@ export default {
 
     async loadUserProfile() {
       try {
-        const isLoggedIn = await this.userStore.checkLoginStatus()
-        if (!isLoggedIn) return
-
-        const userId = this.targetUserId || await this.userStore.getUserId()
+        let userId
+        if (this.targetUserId) {
+          userId = this.targetUserId
+        } else {
+          const isLoggedIn = await this.userStore.checkLoginStatus()
+          if (!isLoggedIn) return
+          userId = await this.userStore.getUserId()
+        }
 
         const res = await userApi.getUserProfile(userId)
         if (res.status === 10000 && res.data) {

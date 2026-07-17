@@ -149,34 +149,47 @@ export const useUserStore = defineStore('user', {
 		}
 	},
 
+	restoreSession({ redirectOnMissing = false } = {}) {
+		try {
+			this.token = uni.getStorageSync('token') || this.token
+			this.openId = uni.getStorageSync('openId') || this.openId || this.token
+			this.userId = uni.getStorageSync('userId') || this.userId || this.openId || this.token
+			this.expireAt = uni.getStorageSync('expireAt') || this.expireAt
+
+			const normalizedExpireAt = this.normalizeExpireAt(this.expireAt)
+			const isValid = !!this.token && !!this.userId && !!this.expireAt && !this.isExpired(normalizedExpireAt)
+
+			if (!isValid) {
+				this.clearUserInfo()
+				if (redirectOnMissing) {
+					this.redirectToLogin()
+				}
+				return false
+			}
+
+			this.expireAt = normalizedExpireAt
+			uni.setStorageSync('openId', this.openId)
+			uni.setStorageSync('userId', this.userId)
+			uni.setStorageSync('expireAt', this.expireAt)
+			this.isLogin = true
+			return true
+		} catch (error) {
+			this.clearUserInfo()
+			if (redirectOnMissing) {
+				this.redirectToLogin()
+			}
+			return false
+		}
+	},
+
     // 检查登录状态
     async checkLoginStatus() {
-      try {
-        this.token = uni.getStorageSync('token') || this.token
-        this.openId = uni.getStorageSync('openId') || this.openId || this.token
-        this.userId = uni.getStorageSync('userId') || this.userId || this.openId || this.token
-        this.expireAt = uni.getStorageSync('expireAt') || this.expireAt
-
-        const normalizedExpireAt = this.normalizeExpireAt(this.expireAt)
-
-        if (!this.token || !this.userId || !this.expireAt || this.isExpired(normalizedExpireAt)) {
-          this.clearUserInfo()
-          this.redirectToLogin()
-          return false
-        }
-
-        this.expireAt = normalizedExpireAt
-        uni.setStorageSync('openId', this.openId)
-        uni.setStorageSync('userId', this.userId)
-        uni.setStorageSync('expireAt', this.expireAt)
-        this.isLogin = true
-        return true
-      } catch (error) {
-        this.clearUserInfo()
-        this.redirectToLogin()
-        return false
-      }
+      return this.restoreSession({ redirectOnMissing: true })
     },
+
+	checkLoginSilently() {
+		return this.restoreSession({ redirectOnMissing: false })
+	},
 	// 定义一个函数来判断当前时间是否大于 expireAt
 	isExpired(expireAt) {
 	  const expireAtSeconds = this.normalizeExpireAt(expireAt)

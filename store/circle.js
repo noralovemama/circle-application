@@ -35,6 +35,30 @@ export const useCircleStore = defineStore('circle', {
       return Array.from(mergedMap.values())
     },
 
+    async hydrateCircleList(records = [], { userId = '', longitude = '', latitude = '' } = {}) {
+      if (!Array.isArray(records) || records.length === 0) return
+
+      const detailResults = await Promise.all(records.map(async (item) => {
+        const circleId = item && (item.circleId || item.circleID || item.id)
+        if (!circleId) return item
+        try {
+          const res = await circleApi.getCircleDetail(circleId, userId, longitude, latitude)
+          if (res && res.status === 10000 && res.data) {
+            return {
+              ...item,
+              ...res.data,
+              circleUserItemList: res.data.circleUserItemList || res.data.userList || res.data.members || item.circleUserItemList || []
+            }
+          }
+        } catch (error) {
+          console.log('[Store] 详情补全失败，保留列表数据:', circleId, error && error.message ? error.message : error)
+        }
+        return item
+      }))
+
+      this.list = this.mergeUniqueCircles(this.list, detailResults)
+    },
+
     // 重置状态
     reset() {
       this.list = []
@@ -118,6 +142,8 @@ export const useCircleStore = defineStore('circle', {
             this.list = this.mergeUniqueCircles(this.list, records)
           }
           this.error = null
+
+          await this.hydrateCircleList(records, { userId, longitude, latitude })
           
           // 更新分页信息
           const hasMore = size > 0 && (hasTotal ? current * size < total : records.length >= size)

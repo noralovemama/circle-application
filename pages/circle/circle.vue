@@ -7,12 +7,12 @@
 			<view class="page-content">
 
 				<view class="hero-card">
-					<view class="hero-eyebrow">小群友</view>
-					<text class="hero-title">{{ getListFlag() === 1 ? '看看你发起和加入的小局' : '和对的人约一杯咖啡，一起聊感兴趣的事' }}</text>
-					<text class="hero-copy">{{ getListFlag() === 1 ? '这里会收起你正在参与的局，也方便你继续回看、补充和分享。' : '最多6人小群，先在线上聊共同兴趣，再找个咖啡店见一面' }}</text>
+					<view class="hero-eyebrow">{{ getListFlag() === 1 ? '我的小局' : (isVisitorMode ? '先逛逛' : '小群友') }}</view>
+					<text class="hero-title">{{ getHeroTitle() }}</text>
+					<text class="hero-copy">{{ getHeroCopy() }}</text>
 					<view class="hero-points">
-						<text class="hero-point">{{ getListFlag() === 1 ? '继续留言' : '固定 6 人' }}</text>
-						<text class="hero-point">{{ getListFlag() === 1 ? '回看安排' : '先留言再见面' }}</text>
+						<text class="hero-point">{{ getListFlag() === 1 ? '继续留言' : (isVisitorMode ? '先看真实圈子' : '固定 6 人') }}</text>
+						<text class="hero-point">{{ getListFlag() === 1 ? '回看安排' : (isVisitorMode ? '合适再登录加入' : '先留言再见面') }}</text>
 						<text class="hero-point">{{ getListFlag() === 1 ? '补充细节' : '聊得来再去见朋友' }}</text>
 					</view>
 				</view>
@@ -20,7 +20,7 @@
 				<view class="section list-section">
 					<view class="section-head">
 						<text class="section-title">{{ getListFlag() === 1 ? '我的圈子' : '附近正在组局' }}</text>
-						<text class="section-subtitle">{{ getListFlag() === 1 ? '回到你已经参与的局' : '挑一个你想加入的话题' }}</text>
+						<text class="section-subtitle">{{ getSectionSubtitle() }}</text>
 					</view>
 					<view class="list">
 						<view
@@ -29,6 +29,9 @@
 							v-for="(item, index) in circleStore.list"
 							:key="item.circleId"
 						>
+							<view class="group-badge-row">
+								<text class="group-seat">{{ getMemberLabel(item) }}</text>
+							</view>
 							<view class="group-top">
 								<image
 									class="avatar"
@@ -47,22 +50,20 @@
 							<view class="group-meta">
 								<text class="meta-pill">{{ getDistanceLabel(item) }}</text>
 								<text class="meta-pill">{{ formatActivityLabel(item.activityTime || item.createTime) }}</text>
-								<text class="meta-pill">{{ getMemberLabel(item) }}</text>
 								<text v-if="isCircleStarted(item)" class="meta-pill muted">已开始</text>
 							</view>
 							<view class="tag-row">
 								<text class="tag" v-for="tag in getCircleTags(item)" :key="tag">{{ tag }}</text>
 							</view>
 							<text class="group-hint">{{ getDecisionHint(item) }}</text>
-
-							<button
-								class="view-btn"
-								:class="{ 'view-btn-disabled': isCircleStarted(item) }"
-								:disabled="isCircleStarted(item)"
+							<view
+								class="group-action"
+								:class="{ 'group-action-disabled': isCircleStarted(item) }"
 								@click.stop="navigateToDetail(item)"
 							>
-								{{ isCircleStarted(item) ? '已开始' : '查看这局' }}
-							</button>
+								<text class="group-action-text">{{ isCircleStarted(item) ? '这局已经开始' : '进去看看这局' }}</text>
+								<text class="group-action-arrow">{{ isCircleStarted(item) ? '·' : '→' }}</text>
+							</view>
 						</view>
 					</view>
 
@@ -105,6 +106,15 @@
 	} from '@/request/api'
 	import { normalizeImageForDisplay, pad2 } from '@/utils/image'
 
+	const EUROPE_CIRCLE_ID = 'bf0208a16f2f74c654597fb5de2eeea8'
+	const EUROPE_CIRCLE_NAME = '约人去欧洲'
+	const EUROPE_CIRCLE_INTRO = '约几个互联网工作的人一起去欧洲旅游，希望是从事产品和研发相关工作，喜欢户外和旅行的'
+	const EUROPE_CIRCLE_COFFEE_SHOP = 'Manner Coffee(西溪亲橙里店)'
+
+	function pickStableCoffeeShop() {
+		return EUROPE_CIRCLE_COFFEE_SHOP
+	}
+
 	export default {
 		setup() {
 			const circleStore = useCircleStore()
@@ -126,6 +136,7 @@
 				loading: false,
 				refreshing: false,
 				isFromHome: true,
+				isVisitorMode: false,
 				currentListParams: null,
 				pageOptions: null // 保存页面参数
 			}
@@ -224,19 +235,6 @@
 				})
 
 				const userId = await this.requireLoginForList()
-				if (!userId) return
-
-				// #ifdef MP-WEIXIN
-				if (uni.getSystemInfoSync().platform === 'devtools') {
-					console.log('模拟器环境，使用默认位置信息')
-					this.loadCircleListWithLocation({
-						userId,
-						longitude: 116.24145697699653,
-						latitude: 39.93208468967014
-					})
-					return
-				}
-				// #endif
 
 				uni.getLocation({
 					type: 'gcj02',
@@ -247,21 +245,40 @@
 						this.loadCircleListWithLocation({ userId, longitude, latitude })
 					},
 					fail: (err) => {
-						console.error('获取位置失败，使用默认位置加载圈子列表：', err)
+						console.error('获取位置失败，按非附近排序加载真实圈子列表：', err)
+						uni.showToast({
+							title: '未获取到定位，先展示真实列表',
+							icon: 'none'
+						})
 						this.loadCircleListWithLocation({
 							userId,
-							longitude: 116.24145697699653,
-							latitude: 39.93208468967014
+							longitude: '',
+							latitude: ''
 						})
 					}
 				})
 			},
 
 			async requireLoginForList() {
-				const isLoggedIn = await this.userStore.checkLoginStatus()
+				if (this.getListFlag() === 1) {
+					this.isVisitorMode = false
+					const isLoggedIn = await this.userStore.checkLoginStatus()
+					if (!isLoggedIn) {
+						this.circleStore.list = []
+						this.circleStore.error = null
+						return ''
+					}
+					try {
+						await this.userStore.getUserDetail()
+					} catch (error) {
+						console.log('用户资料暂时未加载完成:', error)
+					}
+					return await this.userStore.getUserId()
+				}
+
+				const isLoggedIn = await this.userStore.checkLoginSilently()
+				this.isVisitorMode = !isLoggedIn
 				if (!isLoggedIn) {
-					this.circleStore.list = []
-					this.circleStore.error = null
 					return ''
 				}
 				try {
@@ -301,6 +318,36 @@
 				return this.pageOptions && this.pageOptions.type === 'my' ? 1 : 0
 			},
 
+			getHeroTitle() {
+				if (this.getListFlag() === 1) {
+					return '看看你发起和加入的小局'
+				}
+				if (this.isVisitorMode) {
+					return '先看看附近都在聊什么，再决定要不要加入'
+				}
+				return '和对的人约一杯咖啡，一起聊感兴趣的事'
+			},
+
+			getHeroCopy() {
+				if (this.getListFlag() === 1) {
+					return '这里会收起你正在参与的局，也方便你继续回看、补充和分享。'
+				}
+				if (this.isVisitorMode) {
+					return '列表里展示的都是当前真实在组的局。先看主题、时间和发起人，合适再登录加入。'
+				}
+				return '最多6人小群，先在线上聊共同兴趣，再找个咖啡店见一面'
+			},
+
+			getSectionSubtitle() {
+				if (this.getListFlag() === 1) {
+					return '回到你已经参与的局'
+				}
+				if (this.isVisitorMode) {
+					return '先看主题、时间和谁发起，再决定要不要加入'
+				}
+				return '挑一个你想加入的话题'
+			},
+
 			getAvatar(item) {
 				return normalizeImageForDisplay(item.ownerImage, '/static/default-avatar.png')
 			},
@@ -309,11 +356,26 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
+			isEuropeCircle(item = {}) {
+				return String(item.circleId || '') === EUROPE_CIRCLE_ID || String(item.circleName || '').trim() === EUROPE_CIRCLE_NAME
+			},
+
+			getCircleVenue(item = {}) {
+				if (item.activityLocation) return item.activityLocation
+				if (this.isEuropeCircle(item)) {
+					return pickStableCoffeeShop(item.circleId || item.circleName)
+				}
+				return ''
+			},
+
 			getCircleTitle(item) {
 				return item.circleName || '圈子'
 			},
 
 			getCircleSummary(item) {
+				if (this.isEuropeCircle(item)) {
+					return EUROPE_CIRCLE_INTRO
+				}
 				return item.introduction || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松开场，也保留一点深入交流的机会。'
 			},
 
@@ -336,12 +398,18 @@
 			},
 
 			getCircleTags(item) {
-				const source = [item.topic, item.slogan, item.activityLocation].filter(Boolean)
-				const tags = source.slice(0, 3)
-				return tags.length ? tags : ['固定 6 人', '先聊再见', '共同兴趣']
+				if (this.isEuropeCircle(item)) {
+					const venue = this.getCircleVenue(item)
+					return venue ? [venue] : []
+				}
+				const source = [item.topic, item.slogan, this.getCircleVenue(item)].filter(Boolean)
+				return source.slice(0, 3)
 			},
 
 			getDecisionHint(item) {
+				if (this.isEuropeCircle(item)) {
+					return '入局后可以先在线上留言沟通，然后在指定的时间地点喝杯咖啡噢'
+				}
 				const members = item.circleUserItemList || item.userList || item.members || []
 				const currentMembers = item.memberCount !== undefined && item.memberCount !== null
 					? Number(item.memberCount)
@@ -458,12 +526,13 @@
 	}
 
 	.hero-card {
-		padding: 24px 20px;
-		border-radius: 24px;
+		padding: 26px 22px 22px;
+		border-radius: 28px;
 		background:
+			radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.24), transparent 20%),
 			radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 30%),
-			linear-gradient(135deg, #8d6b53 0%, #a88569 56%, #c6a68d 100%);
-		box-shadow: 0 18px 35px rgba(111, 84, 63, 0.2);
+			linear-gradient(145deg, #6f4b39 0%, #9a6d52 46%, #d3a98e 100%);
+		box-shadow: 0 22px 44px rgba(111, 84, 63, 0.24);
 		color: #fffaf6;
 	}
 
@@ -514,8 +583,7 @@
 		line-height: 28px;
 	}
 
-	.button-soft,
-	.view-btn {
+	.button-soft {
 		border: 0;
 		border-radius: 18px;
 		font-size: 15px;
@@ -543,7 +611,6 @@
 	}
 
 	.button-soft:active,
-	.view-btn:active,
 	.group-card:active {
 		transform: translateY(-1px);
 	}
@@ -553,8 +620,12 @@
 	}
 
 	.section-head {
-		display: block;
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 12px;
 		margin-bottom: 14px;
+		padding: 0 2px;
 	}
 
 	.section-title {
@@ -567,10 +638,11 @@
 
 	.section-subtitle {
 		display: block;
-		margin-top: 4px;
+		max-width: 180px;
 		font-size: 13px;
 		line-height: 20px;
 		color: #7d6a5c;
+		text-align: right;
 	}
 
 	.list {
@@ -634,11 +706,40 @@
 
 
 	.group-card {
-		padding: 20px;
+		position: relative;
+		padding: 18px 18px 20px;
+		overflow: hidden;
+		border-radius: 24px;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 241, 0.95));
+		box-shadow: 0 14px 30px rgba(103, 77, 58, 0.08);
 	}
 
 	.group-card-disabled {
 		opacity: 0.62;
+	}
+
+	.group-badge-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 12px;
+	}
+
+	.group-seat {
+		display: inline-flex;
+		align-items: center;
+		min-height: 26px;
+		padding: 0 10px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 900;
+		line-height: 26px;
+	}
+
+	.group-seat {
+		background: rgba(140, 102, 76, 0.1);
+		color: #7b5f48;
 	}
 
 	.group-top {
@@ -698,6 +799,35 @@
 		line-height: 20px;
 	}
 
+	.group-action {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin-top: 16px;
+		padding-top: 14px;
+		border-top: 1px solid rgba(82, 49, 31, 0.08);
+	}
+
+	.group-action-text {
+		color: #4f3526;
+		font-size: 14px;
+		font-weight: 900;
+		line-height: 20px;
+	}
+
+	.group-action-arrow {
+		color: #8c664c;
+		font-size: 18px;
+		font-weight: 900;
+		line-height: 20px;
+	}
+
+	.group-action-disabled .group-action-text,
+	.group-action-disabled .group-action-arrow {
+		color: #ad9d90;
+	}
+
 	.group-meta,
 	.tag-row {
 		display: flex;
@@ -743,23 +873,6 @@
 		border: 1px solid rgba(123, 95, 73, 0.12);
 		background: rgba(255, 255, 255, 0.92);
 		color: #7d6a5c;
-	}
-
-	.view-btn {
-		width: 100%;
-		height: 48px;
-		line-height: 48px;
-		margin: 14px 0 0;
-		padding: 0 18px;
-		background: linear-gradient(135deg, #8c664c 0%, #72513b 100%);
-		box-shadow: 0 14px 26px rgba(94, 70, 52, 0.18);
-		color: #ffffff;
-	}
-
-	.view-btn-disabled {
-		background: #efe7df;
-		box-shadow: none;
-		color: #ad9d90;
 	}
 
 	.empty-card {
