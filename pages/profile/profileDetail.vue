@@ -109,9 +109,9 @@ export default {
     },
     heroSubtitle() {
       if (this.targetUserId) {
-        return '看看对方留下了哪些个人信息'
+        return '先看看对方写了什么，再决定要不要认识'
       }
-      return '这是别人看到你的资料页面'
+      return '这是别人决定要不要认识你的第一眼'
     },
     basicInfoItems() {
       return [

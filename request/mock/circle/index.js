@@ -12,7 +12,7 @@ export const generateMockList = (params = {}) => {
   for (let i = 0; i < size; i++) {
     const id = startIndex + i
     if (id >= totalCount) break // 如果超过总数据量就停止
-    
+
     list.push({
       circleId: `circle_${id}`,
       circleName: `圈子${id + 1}`,
@@ -34,10 +34,10 @@ export const generateMockList = (params = {}) => {
   })
   
   return {
-    code: 0,
+    status: 10000,
     message: 'success',
     data: {
-      records: list,
+      circlePageItemList: list,
       total: totalCount,
       size: size,
       current: current
@@ -56,10 +56,10 @@ export const page = (params) => {
   if (current < 1 || size < 1) {
     console.error('[Mock] 参数错误:', { current, size })
     return {
-      code: -1,
+      status: 10001,
       message: '参数错误',
       data: {
-        records: [],
+        circlePageItemList: [],
         total: 0,
         size: size,
         current: current

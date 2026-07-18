@@ -9,73 +9,70 @@
 
 		<!-- 表单区域 -->
 		<view class="hero-card">
-			<text class="hero-eyebrow">{{ isEdit ? '调整这局' : '发起一局' }}</text>
-			<text class="hero-title">{{ isEdit ? '把信息补清楚，让大家更容易决定要不要来' : '写清楚主题、时间和地点，等对的人加入' }}</text>
-			<text class="hero-copy">{{ isEdit ? '你可以修改时间、地点和描述，也可以重新组织这局的表达方式。' : '固定 6 人的小局，信息越具体，越容易吸引到真正想参与的人。' }}</text>
+			<text class="hero-eyebrow">{{ isEdit ? '编辑圈子' : '发起圈子' }}</text>
+			<text class="hero-title">写清楚为什么建立这个圈子，最想做的事情是什么</text>
+			<text class="hero-copy">{{ isEdit ? '把关键信息补充清楚。' : '把原因和安排写具体。' }}</text>
 		</view>
 
 		<view class="form-section">
 			<view class="circle-header">
 				<text class="creator-text">{{ getCreatorName() }}想和大家一起</text>
-				<text class="creator-subtitle">{{ isEdit ? '更新这场小局的安排' : '发起一场值得参加的小局' }}</text>
+				<text class="creator-subtitle">{{ isEdit ? '更新圈子信息' : '建立圈子' }}</text>
 			</view>
 
-			<view class="tips-card">
-				<text class="tips-title">填写建议</text>
-				<text class="tips-copy">把主题写具体一点，把地点写到大家能判断通勤成本的程度，再给一句为什么值得来。</text>
-			</view>
-
-			<view class="preview-card">
-				<text class="preview-title">发布后，别人会先看到这些</text>
-				<view class="preview-item">
-					<text class="preview-index">1</text>
-					<text class="preview-copy">这局聊什么，适不适合自己</text>
-				</view>
-				<view class="preview-item">
-					<text class="preview-index">2</text>
-					<text class="preview-copy">时间和地点值不值得专门赶过去</text>
-				</view>
-				<view class="preview-item">
-					<text class="preview-index">3</text>
-					<text class="preview-copy">为什么值得来，现场会是什么感觉</text>
-				</view>
-			</view>
-			
 			<view class="form-item">
 				<text class="label">圈子名称<text class="required">*</text></text>
-				<input class="input" v-model="formData.circleName" @input="onFieldInput('circleName', $event)" placeholder="比如：产品经理周三晚咖啡局" />
+				<input class="input" v-model="formData.circleName" @input="onFieldInput('circleName', $event)" placeholder="比如：想找人聊聊欧洲旅行计划" />
+			</view>
+
+			<view class="form-item">
+				<text class="label">主题<text class="required">*</text></text>
+				<input class="input" v-model="formData.theme" @input="onFieldInput('theme', $event)" placeholder="这个圈子最核心想聊什么" />
+			</view>
+
+			<view class="form-item">
+				<text class="label">为什么建立这个圈子，最想做的事情是什么<text class="required">*</text></text>
+				<textarea class="textarea textarea-compact" maxlength="800" v-model="formData.purpose" @input="onFieldInput('purpose', $event)" placeholder="比如：想约几个做产品和研发的人，一起聊欧洲旅行计划，看看能不能约到暑假同行的朋友" />
+			</view>
+
+			<view class="form-item">
+				<text class="label">预算类型<text class="required">*</text></text>
+				<view class="choice-row">
+					<view
+						v-for="type in budgetTypeOptions"
+						:key="type"
+						class="choice-chip"
+						:class="{ 'choice-chip-active': formData.budgetType === type }"
+						@click="selectBudgetType(type)"
+					>
+						{{ type }}
+					</view>
+				</view>
 			</view>
 
 			<view class="form-item">
 				<text class="label">预算<text class="required">*</text></text>
-				<input 
-					class="input" 
-					type="number" 
-					v-model="formData.money" 
-					placeholder="比如：0 元、68 元 / 人" 
+				<input
+					class="input"
+					type="number"
+					v-model="formData.money"
+					:placeholder="formData.budgetType === '具体活动预算' ? '比如：300 元 / 人' : '比如：38 元、58 元 / 人'"
 					@input="onMoneyInput"
 					@blur="onMoneyBlur"
 				/>
-				<text class="hint">预算写人均就够了，0 代表免费。</text>
+				<text class="hint">会和预算类型一起展示。</text>
 			</view>
 
 			<view class="form-item">
-				<text class="label">圈子描述<text class="required">*</text></text>
-				<textarea class="textarea" maxlength="3000" v-model="formData.introduction" @input="onFieldInput('introduction', $event)" placeholder="这一局想聊什么、适合什么样的人来、你希望现场是什么氛围？" />
-			</view>
-
-			<!-- 位置选择 -->
-			<view class="form-item">
-				<text class="label">位置<text class="required">*</text></text>
+				<text class="label">咖啡店<text class="required">*</text></text>
 				<view class="location-picker" @click="openMap">
-					<text class="location-text">{{ formData.location || '选择一个大家容易判断距离的位置' }}</text>
+					<text class="location-text">{{ formData.location || '选择一家真实存在的咖啡店' }}</text>
 					<uni-icons type="right" size="16"></uni-icons>
 				</view>
 			</view>
 
-			<!-- 活动日期 -->
 			<view class="form-item">
-				<text class="label">活动日期<text class="required">*</text></text>
+				<text class="label">见面日期<text class="required">*</text></text>
 				<picker mode="date" :value="formData.activityDate" :start="todayDate" @change="onActivityDateChange">
 					<view class="picker">
 						<text>{{ formData.activityDate || '选择日期' }}</text>
@@ -83,10 +80,9 @@
 					</view>
 				</picker>
 			</view>
-			
-			<!-- 活动时间 -->
+
 			<view class="form-item">
-				<text class="label">活动时间<text class="required">*</text></text>
+				<text class="label">见面时间<text class="required">*</text></text>
 				<picker mode="time" :value="formData.activityTime" :start="getMinTime()" @change="onActivityTimeChange">
 					<view class="picker">
 						<text>{{ formData.activityTime || '选择时间' }}</text>
@@ -94,11 +90,10 @@
 					</view>
 				</picker>
 			</view>
-
 		</view>
 
 		<!-- 保存按钮 -->
-		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : (isEdit ? '更新这局' : '发布这局') }}</button>
+		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : (isEdit ? '更新圈子' : '发布圈子') }}</button>
 
 		<!-- 底部占位 -->
 		<view class="bottom-space"></view>
@@ -115,6 +110,53 @@
 	} from '@/store/user'
 	import { useCircleStore } from '@/store/circle'
 
+	const BUDGET_TYPE_OPTIONS = ['咖啡预算', '具体活动预算']
+
+	function mergePurpose(reason = '', goal = '') {
+		return [reason, goal].map(item => String(item || '').trim()).filter(Boolean).join('\n')
+	}
+
+	function buildStructuredIntroduction({ theme = '', purpose = '' } = {}) {
+		return [
+			`主题：${theme}`,
+			`为什么建立这个圈子，最想做的事情是什么：${purpose}`
+		].join('\n')
+	}
+
+	function parseStructuredIntroduction(introduction = '') {
+		const text = String(introduction || '').trim()
+		if (!text) {
+			return {
+				theme: '',
+				purpose: ''
+			}
+		}
+
+		const getField = (label) => {
+			const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			const reg = new RegExp(`${escapedLabel}：([\\s\\S]*?)(?:\\n(?:主题|为什么建立这个圈子，最想做的事情是什么|为什么要建立这个圈子|最想做的事情)：|$)`)
+			const match = text.match(reg)
+			return match && match[1] ? match[1].trim() : ''
+		}
+
+		const theme = getField('主题')
+		const purpose = getField('为什么建立这个圈子，最想做的事情是什么')
+		const reason = getField('为什么要建立这个圈子')
+		const goal = getField('最想做的事情')
+
+		if (theme || purpose || reason || goal) {
+			return {
+				theme,
+				purpose: purpose || mergePurpose(reason, goal)
+			}
+		}
+
+		return {
+			theme: '',
+			purpose: text
+		}
+	}
+
 	export default {
 		data() {
 			return {
@@ -123,8 +165,10 @@
 				isEdit: false,
 				formData: {
 					circleName: '',
+					theme: '',
+					purpose: '',
+					budgetType: '咖啡预算',
 					money: '',
-					introduction: '',
 					location: '',
 					address: '',
 					latitude: '',
@@ -135,6 +179,7 @@
 				longitude: '',
 				latitude: '',
 				isSaving: false,
+				budgetTypeOptions: BUDGET_TYPE_OPTIONS,
 				todayDate: '',  // 今天的日期，用于限制日期选择
 				currentTime: ''  // 当前时间，用于限制时间选择
 			}
@@ -179,6 +224,10 @@
 
 			onFieldInput(field, e) {
 				this.formData[field] = e.detail.value
+			},
+
+			selectBudgetType(type) {
+				this.formData.budgetType = type
 			},
 
 			parseCircleDate(value) {
@@ -280,16 +329,6 @@
 				}, 900)
 			},
 			async loadCircleData() {
-				// #ifdef MP-WEIXIN
-				if (uni.getSystemInfoSync().platform === 'devtools') {
-					console.log('模拟器环境，使用默认位置信息')
-					const longitude = 116.24145697699653
-					const latitude = 39.93208468967014
-					await this.loadCircleDataReal(longitude, latitude)
-					return
-				}
-				// #endif
-
 				uni.getLocation({
 					type: 'gcj02',
 					success: async ({
@@ -299,8 +338,12 @@
 						await this.loadCircleDataReal(longitude, latitude)
 					},
 					fail: (err) => {
-						console.error('获取位置失败，使用默认位置加载圈子详情：', err)
-						this.loadCircleDataReal(116.24145697699653, 39.93208468967014)
+						console.error('获取位置失败，按无定位参数加载真实圈子详情：', err)
+						uni.showToast({
+							title: '未获取到定位，先加载真实详情',
+							icon: 'none'
+						})
+						this.loadCircleDataReal('', '')
 					}
 				})
 
@@ -314,6 +357,7 @@
 						const {
 							data
 						} = res
+						const parsedIntroduction = parseStructuredIntroduction(data.introduction)
 						const dateObj = this.parseCircleDate(data.activityTime) || new Date();
 
 						// 提取日期部分，格式为 YYYY-MM-DD
@@ -328,7 +372,9 @@
 						const time = `${hours}:${minutes}`;
 						this.formData = {
 							circleName: data.circleName,
-							introduction: data.introduction,
+							theme: parsedIntroduction.theme || data.slogan || '',
+							purpose: parsedIntroduction.purpose || '',
+							budgetType: this.budgetTypeOptions.includes(data.topic) ? data.topic : '咖啡预算',
 							location: data.activityLocation,
 							latitude: data.latitude,
 							longitude: data.longitude,
@@ -342,7 +388,7 @@
 					}
 				} catch (error) {
 					uni.showToast({
-						title: '这局的信息暂时没加载出来',
+						title: '圈子信息暂时没加载出来',
 						icon: 'none'
 					})
 				}
@@ -353,7 +399,7 @@
 				uni.chooseLocation({
 					success: (res) => {
 						console.info('选择位置：', res)
-						const locationText = res.address || res.name || ''
+						const locationText = res.name || res.address || ''
 						this.formData.location = locationText
 						this.formData.address = res.address || locationText
 						this.formData.latitude = res.latitude
@@ -361,18 +407,10 @@
 					},
 					fail: (err) => {
 						console.error('选择位置失败：', err)
-						if (process.env.NODE_ENV === 'development') {
-							const mockLocation = {
-								name: '杭州市西湖区黄龙时代广场',
-								address: '浙江省杭州市西湖区黄龙时代广场B座',
-								latitude: 30.274085,
-								longitude: 120.13802
-							}
-							this.formData.location = mockLocation.address
-							this.formData.address = mockLocation.address
-							this.formData.latitude = mockLocation.latitude
-							this.formData.longitude = mockLocation.longitude
-						}
+						uni.showToast({
+							title: '没有选到地点',
+							icon: 'none'
+						})
 					}
 				})
 			},
@@ -411,9 +449,9 @@
 				
 				// 验证是否为有效数字
 				const numValue = parseInt(value)
-				if (isNaN(numValue) || numValue < 0) {
+				if (isNaN(numValue) || numValue <= 0) {
 					uni.showToast({
-						title: '预算写成 0 或正整数就可以',
+						title: '预算要大于 0 元',
 						icon: 'none',
 						duration: 1500
 					})
@@ -521,11 +559,13 @@
 			async saveCircle() {
 				const requiredFields = [
 					{ field: 'circleName', label: '圈子名称' },
+					{ field: 'theme', label: '主题' },
+					{ field: 'purpose', label: '为什么建立这个圈子，最想做的事情是什么' },
+					{ field: 'budgetType', label: '预算类型' },
 					{ field: 'money', label: '预算' },
-					{ field: 'introduction', label: '圈子描述' },
-					{ field: 'location', label: '位置' },
-					{ field: 'activityTime', label: '活动时间' },
-					{ field: 'activityDate', label: '活动日期' }
+					{ field: 'location', label: '咖啡店' },
+					{ field: 'activityTime', label: '时间' },
+					{ field: 'activityDate', label: '日期' }
 				]
 
 				for (let index = 0; index < requiredFields.length; index += 1) {
@@ -550,9 +590,9 @@
 				}
 				
 				const moneyValue = parseInt(this.formData.money)
-				if (isNaN(moneyValue) || moneyValue < 0) {
+				if (isNaN(moneyValue) || moneyValue <= 0) {
 					uni.showToast({
-						title: '预算写成 0 或正整数就可以',
+						title: '预算要大于 0 元',
 						icon: 'none'
 					})
 					return
@@ -578,6 +618,8 @@
 					await this.userStore.ensureUserInfo()
 					const userInfo = this.userStore.userInfo
 					let savedCircleId = this.circleId
+					const introduction = buildStructuredIntroduction(this.formData)
+					const slogan = this.formData.theme
 
 					if (this.isEdit) {
 						const ownerId = await this.userStore.getUserId()
@@ -590,6 +632,9 @@
 						const updateData = {
 							circleId: this.circleId,
 							...this.formData,
+							introduction,
+							slogan,
+							topic: this.formData.budgetType,
 							ownerId,
 							ownerName,
 							ownerImage
@@ -609,6 +654,9 @@
 						}
 						const createData = {
 							...this.formData,
+							introduction,
+							slogan,
+							topic: this.formData.budgetType,
 							ownerImage
 						}
 						const res = await circleApi.createCircle(createData, ownerId, ownerName)
@@ -623,7 +671,7 @@
 					}
 
 					uni.showToast({
-						title: '这局已经保存好了',
+						title: '圈子已经保存好了',
 						icon: 'success'
 					})
 
@@ -647,7 +695,7 @@
 				} catch (error) {
 					console.error('创建圈子失败:', error)
 					uni.showToast({
-						title: error.message || '这局还没保存成功',
+						title: error.message || '圈子还没保存成功',
 						icon: 'none',
 						duration: 2000
 					})
@@ -768,73 +816,6 @@
 		border-bottom: 1px solid rgba(82, 49, 31, 0.08);
 	}
 
-	.create-container .tips-card {
-		margin-bottom: 20px;
-		padding: 15px 16px 16px;
-		border-radius: 18px;
-		background: rgba(140, 102, 76, 0.08);
-	}
-
-	.create-container .preview-card {
-		margin-bottom: 20px;
-		padding: 16px;
-		border-radius: 18px;
-		background: rgba(255, 255, 255, 0.86);
-		border: 1px solid rgba(123, 95, 73, 0.08);
-	}
-
-	.create-container .preview-title {
-		display: block;
-		color: #30261f;
-		font-size: 15px;
-		font-weight: 900;
-		line-height: 22px;
-	}
-
-	.create-container .preview-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding-top: 12px;
-	}
-
-	.create-container .preview-index {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 20px;
-		height: 20px;
-		border-radius: 999px;
-		background: #f1e4d8;
-		color: #7b5f48;
-		font-size: 11px;
-		font-weight: 900;
-		line-height: 20px;
-		flex-shrink: 0;
-	}
-
-	.create-container .preview-copy {
-		color: #7d6a5c;
-		font-size: 13px;
-		line-height: 20px;
-	}
-
-	.create-container .tips-title {
-		display: block;
-		color: #7b5f48;
-		font-size: 13px;
-		font-weight: 900;
-		line-height: 1.4;
-	}
-
-	.create-container .tips-copy {
-		display: block;
-		margin-top: 6px;
-		color: #7d6a5c;
-		font-size: 13px;
-		line-height: 20px;
-	}
-
 	.create-container .creator-text {
 		display: block;
 		color: #7b5f48 !important;
@@ -902,6 +883,10 @@
 		line-height: 24px;
 	}
 
+	.create-container .textarea-compact {
+		min-height: 108px !important;
+	}
+
 	.create-container .location-picker {
 		min-height: 48px !important;
 		padding: 12px 16px !important;
@@ -919,6 +904,34 @@
 		color: #7d6a5c !important;
 		font-size: 13px !important;
 		line-height: 20px;
+	}
+
+	.create-container .choice-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.create-container .choice-chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 42px;
+		padding: 0 16px;
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.92);
+		color: #7d6a5c;
+		font-size: 14px;
+		font-weight: 800;
+		line-height: 20px;
+	}
+
+	.create-container .choice-chip-active {
+		border-color: rgba(111, 61, 29, 0.18);
+		background: #7b5f48;
+		color: #fffaf6;
+		box-shadow: 0 12px 24px rgba(94, 70, 52, 0.14);
 	}
 
 	.create-container .save-btn {

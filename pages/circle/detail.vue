@@ -11,60 +11,31 @@
 
 		<!-- 圈子信息 -->
 		<view class="circle-info">
-			<view class="circle-header">
-				<view class="hero-copy">
-					<text class="creator-text">{{ headerEyebrow }}</text>
-					<text class="hero-title">{{ circle.circleName || '这是一场认真聊天的小局' }}</text>
-					<text class="hero-subtitle">{{ headerSubtitle }}</text>
-					<view class="decision-points">
-						<text class="decision-pill">{{ isFull ? '人数已满' : `还剩 ${remainingSpots} 席` }}</text>
-						<text class="decision-pill">{{ isParticipant || isOwner ? '现在就能留言' : '加入后可以留言' }}</text>
-						<text class="decision-pill">{{ isActivityStarted ? '已经开局' : '先聊再决定见面' }}</text>
+				<view class="circle-header">
+					<view class="hero-copy">
+						<text class="creator-text">{{ headerEyebrow }}</text>
+						<text class="hero-title">{{ circle.circleName || '这是一场认真聊天的小局' }}</text>
+						<text class="hero-subtitle">{{ displayDescription }}</text>
+						<view class="decision-points">
+							<text class="decision-pill">{{ isFull ? '人数已满' : `还剩 ${remainingSpots} 席` }}</text>
+						</view>
 					</view>
-				</view>
 				<text class="action-note">{{ actionNote }}</text>
 			</view>
 
 			<view class="activity-card">
-				<view class="section-head">
-					<text class="section-title">这局信息</text>
-					<text class="section-subtitle">先看看主题、时间和参加门槛</text>
-				</view>
-				<view class="activity-info">
-					<view class="info-item">
-						<view class="info-icon">
-							<uni-icons type="wallet-filled" size="15" color="#7b5f48"></uni-icons>
-						</view>
-						<text class="info-text">{{ formatBudget(circle.budget || circle.money) }}</text>
-					</view>
-					<view class="info-item">
-						<view class="info-icon">
-							<uni-icons type="staff-filled" size="15" color="#7b5f48"></uni-icons>
-						</view>
-						<text class="info-text">{{ circle.topic }}</text>
-					</view>
-					<view class="info-item">
-						<view class="info-icon">
-							<uni-icons type="calendar-filled" size="15" color="#7b5f48"></uni-icons>
-						</view>
-						<text class="info-text">{{ circle.slogan }}</text>
+				<view class="info-ribbon">
+					<view class="info-ribbon-item">
+						<text class="info-ribbon-value">{{ remainingSpots }}</text>
+						<text class="info-ribbon-label">剩余席位</text>
 					</view>
 				</view>
 				<view class="activity-time">
 					<text class="time-text">{{ formatActivityTime(circle.activityTime) }}</text>
 				</view>
 				<view class="activity-location">
-					<text class="location-text">{{ circle.activityLocation }}</text>
-					<text class="location-tip">加入后会看到更完整的位置说明</text>
-				</view>
-			</view>
-
-			<view class="circle-desc">
-				<view class="desc-box">
-					<view class="section-head">
-						<text class="section-title">为什么值得来</text>
-					</view>
-					<text class="desc-content">{{ displayDescription }}</text>
+					<text class="location-text">{{ displayLocation }}</text>
+					<text class="location-tip">{{ locationTip }}</text>
 				</view>
 			</view>
 		</view>
@@ -72,7 +43,6 @@
 		<view class="members-section" v-if="memberList.length">
 			<view class="section-head">
 				<text class="section-title">这局都有谁</text>
-				<text class="section-subtitle">{{ memberSummary }}</text>
 			</view>
 			<view class="members-list">
 				<view class="member-item" v-for="member in memberList" :key="member.userId">
@@ -94,7 +64,6 @@
 			<view class="section-header">
 				<view class="section-head">
 					<text class="section-title">留言区</text>
-					<text class="section-subtitle">先看看大家在聊什么，再决定要不要加入</text>
 				</view>
 			</view>
 			
@@ -173,6 +142,43 @@
 	import { useUserStore } from '@/store/user'
 	import { normalizeImageForDisplay, pad2, toSubmittableImageBase64 } from '@/utils/image'
 
+	const EUROPE_CIRCLE_ID = 'bf0208a16f2f74c654597fb5de2eeea8'
+	const EUROPE_CIRCLE_NAME = '约人去欧洲'
+	const EUROPE_CIRCLE_INTRO = '约几个互联网工作的人一起去欧洲旅游，希望是从事产品和研发相关工作，喜欢户外和旅行的'
+	const EUROPE_CIRCLE_COFFEE_SHOP = 'Manner Coffee(西溪亲橙里店)'
+
+	function pickStableCoffeeShop() {
+		return EUROPE_CIRCLE_COFFEE_SHOP
+	}
+
+	function extractStructuredIntroduction(introduction = '') {
+		const text = String(introduction || '').trim()
+		if (!text) return null
+
+		const getField = (label) => {
+			const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			const reg = new RegExp(`${escapedLabel}：([\\s\\S]*?)(?:\\n(?:主题|为什么建立这个圈子，最想做的事情是什么|为什么要建立这个圈子|最想做的事情)：|$)`)
+			const match = text.match(reg)
+			return match && match[1] ? match[1].trim() : ''
+		}
+
+		const theme = getField('主题')
+		const purpose = getField('为什么建立这个圈子，最想做的事情是什么')
+		const reason = getField('为什么要建立这个圈子')
+		const goal = getField('最想做的事情')
+		if (!theme && !purpose && !reason && !goal) return null
+		return {
+			theme,
+			purpose: purpose || [reason, goal].filter(Boolean).join('，')
+		}
+	}
+
+	function formatIntroductionForDisplay(introduction = '') {
+		const parsed = extractStructuredIntroduction(introduction)
+		if (!parsed) return introduction
+		return [parsed.theme, parsed.purpose].map(item => String(item || '').replace(/\s+/g, ' ').trim()).filter(Boolean).join('，')
+	}
+
 	export default {
 		setup() {
 			const userStore = useUserStore()
@@ -215,6 +221,9 @@
 				if (!this.userId) return false
 				return String(this.circle.ownerId || '') === String(this.userId || '')
 			},
+			isVisitor() {
+				return !this.userId
+			},
 			isParticipant() {
 				return Number(this.circle.joinStatus) === 1
 			},
@@ -234,6 +243,7 @@
 			buttonText() {
 				if (this.isOwner) return '编辑这局'
 				if (this.isActivityStarted) return '活动已开始'
+				if (this.isVisitor) return '登录后加入'
 				if (this.isParticipant) return '退出这局'
 				if (this.isFull) return '人数已满'
 				return '加入这局'
@@ -265,38 +275,36 @@
 				return this.isOwner ? '你发起的小局' : `${this.circle.ownerName || '有人'} · 发起的小局`
 			},
 			headerSubtitle() {
-				if (this.isActivityStarted) {
-					return '这场活动已经开始了，可以看看还有哪些人参与。'
-				}
-				if (this.isOwner) {
-					return '你可以继续完善信息、管理成员，也可以在留言区提前暖场。'
-				}
-				if (this.isParticipant) {
-					return '你已经在这局里了，现在可以在留言区继续互动。'
-				}
-				return '先看看主题、时间和成员，再决定要不要加入。'
+				return this.displayDescription
 			},
 			displayDescription() {
-				return this.circle.introduction || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
+				if (this.isEuropeCircle(this.circle)) {
+					return EUROPE_CIRCLE_INTRO
+				}
+				return formatIntroductionForDisplay(this.circle.introduction) || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
+			},
+			displayLocation() {
+				if (this.circle.activityLocation) return this.circle.activityLocation
+				if (this.isEuropeCircle(this.circle)) {
+					return pickStableCoffeeShop(this.circle.circleId || this.circle.circleName)
+				}
+				return '地点待定'
+			},
+			locationTip() {
+				if (this.isEuropeCircle(this.circle)) {
+					return '先在留言区聊起来，再去咖啡，畅聊这件想做的事'
+				}
+				return '先在留言区聊起来，再去线下见面'
 			},
 			memberSummary() {
 				const maxMembers = Number(this.circle.maxMembers || 6)
 				return `现在有 ${this.memberList.length} / ${maxMembers} 位成员`
 			},
 			actionNote() {
-				if (this.isActivityStarted) {
-					return '这场活动已经开始，先看看成员和留言区还留下了什么。'
+				if (this.isEuropeCircle(this.circle)) {
+					return '先在留言区聊起来，再去咖啡，畅聊这件想做的事'
 				}
-				if (this.isOwner) {
-					return '继续补充时间、地点和介绍，会更容易让想来的人下决定。'
-				}
-				if (this.isParticipant) {
-					return '你已经在这局里了，现在可以去留言区确认时间、问问题。'
-				}
-				if (this.isFull) {
-					return '这局已经满员了，先看看其他正在组的局，或者自己发起一场。'
-				}
-				return '加入后就能在留言区先打个招呼，确认时间和细节。'
+				return '先在留言区聊起来，再去线下见面'
 			}
 		},
 
@@ -356,16 +364,6 @@
 				return isNaN(date.getTime()) ? null : date
 			},
 			async loadCurrentPage(options){
-				// #ifdef MP-WEIXIN
-				if (uni.getSystemInfoSync().platform === 'devtools') {
-					console.log('模拟器环境，使用默认位置信息')
-					this.longitude = 116.24145697699653
-					this.latitude = 39.93208468967014
-					await this.loadCircleDetail(options, this.longitude, this.latitude)
-					return
-				}
-				// #endif
-				
 				uni.getLocation({
 					type: 'gcj02',
 					success: async ({
@@ -378,14 +376,21 @@
 					},
 					fail: (err) => {
 						console.error('获取位置失败：', err)
-						this.longitude = 116.24145697699653
-						this.latitude = 39.93208468967014
+						this.longitude = ''
+						this.latitude = ''
+						uni.showToast({
+							title: '未获取到定位，先加载真实详情',
+							icon: 'none'
+						})
 						this.loadCircleDetail(options, this.longitude, this.latitude)
 					}
 				})
 			},
 			getAvatar(item) {
 				return normalizeImageForDisplay(item.image, '/static/default-avatar.png')
+			},
+			isEuropeCircle(item = {}) {
+				return String(item.circleId || '') === EUROPE_CIRCLE_ID || String(item.circleName || '').trim() === EUROPE_CIRCLE_NAME
 			},
 			getCommentAvatar(comment) {
 				return normalizeImageForDisplay(comment && comment.userImage, '/static/default-avatar.png')
@@ -421,11 +426,8 @@
 			},
 			
 			async loadCircleDetail(options, longitude, latitude){
-				const isLoggedIn = await this.userStore.checkLoginStatus()
-				if (!isLoggedIn) {
-					return
-				}
-				this.userId = await this.userStore.getUserId()
+				const isLoggedIn = await this.userStore.checkLoginSilently()
+				this.userId = isLoggedIn ? await this.userStore.getUserId() : ''
 				if (options && options.circleId) {
 					// 先用路由参数设置基本信息
 					this.circle = {
@@ -885,7 +887,14 @@
 
 	.circle-detail .circle-header {
 		display: block;
-		margin-bottom: 18px !important;
+		margin-bottom: 20px !important;
+		padding: 22px 20px 20px;
+		border: 1px solid rgba(82, 49, 31, 0.12);
+		border-radius: 26px;
+		background:
+			radial-gradient(circle at top right, rgba(216, 194, 174, 0.34), transparent 28%),
+			linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 246, 238, 0.94));
+		box-shadow: 0 18px 34px rgba(103, 77, 58, 0.08);
 	}
 
 	.circle-detail .hero-copy {
@@ -1006,6 +1015,37 @@
 	.circle-detail .activity-card {
 		margin: 0 0 20px !important;
 		padding: 20px !important;
+	}
+
+	.circle-detail .info-ribbon {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		margin-bottom: 16px;
+	}
+
+	.circle-detail .info-ribbon-item {
+		padding: 14px 14px 12px;
+		border-radius: 18px;
+		background: linear-gradient(145deg, #f4e6d9, #fff8f2);
+		border: 1px solid rgba(140, 102, 76, 0.12);
+	}
+
+	.circle-detail .info-ribbon-value {
+		display: block;
+		color: #30261f;
+		font-size: 22px;
+		font-weight: 900;
+		line-height: 26px;
+		letter-spacing: -0.3px;
+	}
+
+	.circle-detail .info-ribbon-label {
+		display: block;
+		margin-top: 6px;
+		color: #7d6a5c;
+		font-size: 12px;
+		line-height: 18px;
 	}
 
 	.circle-detail .section-head {

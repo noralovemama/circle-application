@@ -1,5 +1,4 @@
 import config from './config'
-import { findMockFunction } from './mock'
 import { getResponseStatus } from '@/utils/response'
 
 const AUTH_FREE_URLS = ['token/login', 'code/send', 'token/refresh']
@@ -100,29 +99,9 @@ const requestByCallback = (requestOptions, requestStartTime) => {
 
 // 创建请求拦截器
 const request = async (options) => {
-  const { url, method = 'GET', data, mock = false, timeout } = options
-  const useMock = !!mock
+  const { url, method = 'GET', data, timeout } = options
 
-  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data), mock: useMock })
-
-  if (useMock) {
-    try {
-      console.log('[Mock] 开始查找 mock 函数:', url)
-      const result = await findMockFunction(url, data)
-      console.log('[Mock] 执行结果:', result)
-      
-      // 检查返回数据格式
-      if (!result || typeof result !== 'object') {
-        console.error('[Mock] 返回数据格式错误:', result)
-        throw new Error('返回数据格式错误')
-      }
-
-      return normalizeResponseData(result)
-    } catch (error) {
-      console.error('[Mock] 处理错误:', error)
-      throw error
-    }
-  }
+  console.log('[Request] 开始请求:', { url, method, data: sanitizeLogData(data) })
 
   // 真实请求
   const requestStartTime = Date.now()

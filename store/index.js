@@ -109,21 +109,14 @@ const store = createStore({
 				if (state.openid) {
 					resolve(state.openid)
 				} else {
-					uni.login({
-						success: (data) => {
-							commit('login')
-							setTimeout(function() { //模拟异步请求服务器获取 openid
-								const openid = '123456789'
-								console.log('uni.request mock openid[' + openid + ']');
-								commit('setOpenid', openid)
-								resolve(openid)
-							}, 1000)
-						},
-						fail: (err) => {
-							console.log('uni.login 接口调用失败，将无法正常使用开放接口等服务', err)
-							reject(err)
-						}
-					})
+					const storedOpenId = uni.getStorageSync('openId') || uni.getStorageSync('token')
+					if (storedOpenId) {
+						commit('login')
+						commit('setOpenid', storedOpenId)
+						resolve(storedOpenId)
+						return
+					}
+					reject(new Error('未获取到真实 openId，请先完成登录'))
 				}
 			})
 		},
