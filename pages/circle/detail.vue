@@ -151,6 +151,34 @@
 		return EUROPE_CIRCLE_COFFEE_SHOP
 	}
 
+	function extractStructuredIntroduction(introduction = '') {
+		const text = String(introduction || '').trim()
+		if (!text) return null
+
+		const getField = (label) => {
+			const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			const reg = new RegExp(`${escapedLabel}：([\\s\\S]*?)(?:\\n(?:主题|为什么建立这个圈子，最想做的事情是什么|为什么要建立这个圈子|最想做的事情)：|$)`)
+			const match = text.match(reg)
+			return match && match[1] ? match[1].trim() : ''
+		}
+
+		const theme = getField('主题')
+		const purpose = getField('为什么建立这个圈子，最想做的事情是什么')
+		const reason = getField('为什么要建立这个圈子')
+		const goal = getField('最想做的事情')
+		if (!theme && !purpose && !reason && !goal) return null
+		return {
+			theme,
+			purpose: purpose || [reason, goal].filter(Boolean).join('，')
+		}
+	}
+
+	function formatIntroductionForDisplay(introduction = '') {
+		const parsed = extractStructuredIntroduction(introduction)
+		if (!parsed) return introduction
+		return [parsed.theme, parsed.purpose].map(item => String(item || '').replace(/\s+/g, ' ').trim()).filter(Boolean).join('，')
+	}
+
 	export default {
 		setup() {
 			const userStore = useUserStore()
@@ -253,7 +281,7 @@
 				if (this.isEuropeCircle(this.circle)) {
 					return EUROPE_CIRCLE_INTRO
 				}
-				return this.circle.introduction || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
+				return formatIntroductionForDisplay(this.circle.introduction) || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
 			},
 			displayLocation() {
 				if (this.circle.activityLocation) return this.circle.activityLocation
