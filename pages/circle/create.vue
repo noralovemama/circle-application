@@ -9,15 +9,15 @@
 
 		<!-- 表单区域 -->
 		<view class="hero-card">
-			<text class="hero-eyebrow">{{ isEdit ? '调整这局' : '发起一局' }}</text>
+			<text class="hero-eyebrow">{{ isEdit ? '编辑圈子' : '发起圈子' }}</text>
 			<text class="hero-title">写清楚为什么建立这个圈子，最想做的事情是什么</text>
-			<text class="hero-copy">{{ isEdit ? '重点把为什么约、喝哪家咖啡、花多少钱和几点见面说清楚。' : '这不是泛泛社交，先把为什么要约这局写明白，再等对的人加入。' }}</text>
+			<text class="hero-copy">{{ isEdit ? '把关键信息补充清楚。' : '把原因和安排写具体。' }}</text>
 		</view>
 
 		<view class="form-section">
 			<view class="circle-header">
 				<text class="creator-text">{{ getCreatorName() }}想和大家一起</text>
-				<text class="creator-subtitle">{{ isEdit ? '把这局更新成更好下决定的样子' : '发起一场先喝咖啡再聊事情的小局' }}</text>
+				<text class="creator-subtitle">{{ isEdit ? '更新圈子信息' : '建立圈子' }}</text>
 			</view>
 
 			<view class="form-item">
@@ -27,7 +27,7 @@
 
 			<view class="form-item">
 				<text class="label">主题<text class="required">*</text></text>
-				<input class="input" v-model="formData.theme" @input="onFieldInput('theme', $event)" placeholder="这局最核心想聊什么" />
+				<input class="input" v-model="formData.theme" @input="onFieldInput('theme', $event)" placeholder="这个圈子最核心想聊什么" />
 			</view>
 
 			<view class="form-item">
@@ -52,18 +52,17 @@
 
 			<view class="form-item">
 				<text class="label">预算<text class="required">*</text></text>
-				<input 
-					class="input" 
-					type="number" 
-					v-model="formData.money" 
+				<input
+					class="input"
+					type="number"
+					v-model="formData.money"
 					:placeholder="formData.budgetType === '具体活动预算' ? '比如：300 元 / 人' : '比如：38 元、58 元 / 人'"
 					@input="onMoneyInput"
 					@blur="onMoneyBlur"
 				/>
-				<text class="hint">会和预算类型一起展示在发布后的卡片里。</text>
+				<text class="hint">会和预算类型一起展示。</text>
 			</view>
 
-			<!-- 位置选择 -->
 			<view class="form-item">
 				<text class="label">咖啡店<text class="required">*</text></text>
 				<view class="location-picker" @click="openMap">
@@ -72,7 +71,6 @@
 				</view>
 			</view>
 
-			<!-- 活动日期 -->
 			<view class="form-item">
 				<text class="label">见面日期<text class="required">*</text></text>
 				<picker mode="date" :value="formData.activityDate" :start="todayDate" @change="onActivityDateChange">
@@ -83,7 +81,6 @@
 				</picker>
 			</view>
 
-			<!-- 活动时间 -->
 			<view class="form-item">
 				<text class="label">见面时间<text class="required">*</text></text>
 				<picker mode="time" :value="formData.activityTime" :start="getMinTime()" @change="onActivityTimeChange">
@@ -93,11 +90,10 @@
 					</view>
 				</picker>
 			</view>
-
 		</view>
 
 		<!-- 保存按钮 -->
-		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : (isEdit ? '更新这局' : '发布这局') }}</button>
+		<button class="save-btn" :class="{ 'save-btn-disabled': isSaving }" @click="saveCircle" :disabled="isSaving">{{ isSaving ? '保存中...' : (isEdit ? '更新圈子' : '发布圈子') }}</button>
 
 		<!-- 底部占位 -->
 		<view class="bottom-space"></view>
@@ -392,7 +388,7 @@
 					}
 				} catch (error) {
 					uni.showToast({
-						title: '这局的信息暂时没加载出来',
+						title: '圈子信息暂时没加载出来',
 						icon: 'none'
 					})
 				}
@@ -412,7 +408,7 @@
 					fail: (err) => {
 						console.error('选择位置失败：', err)
 						uni.showToast({
-							title: '没有选到真实地点',
+							title: '没有选到地点',
 							icon: 'none'
 						})
 					}
@@ -675,7 +671,7 @@
 					}
 
 					uni.showToast({
-						title: '这局已经保存好了',
+						title: '圈子已经保存好了',
 						icon: 'success'
 					})
 
@@ -699,7 +695,7 @@
 				} catch (error) {
 					console.error('创建圈子失败:', error)
 					uni.showToast({
-						title: error.message || '这局还没保存成功',
+						title: error.message || '圈子还没保存成功',
 						icon: 'none',
 						duration: 2000
 					})

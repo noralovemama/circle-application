@@ -19,7 +19,7 @@
 
 				<view class="section list-section">
 					<view class="section-head">
-						<text class="section-title">{{ getListFlag() === 1 ? '我的圈子' : '附近正在组局' }}</text>
+						<text class="section-title">{{ getListFlag() === 1 ? '我的圈子' : '附近的圈子' }}</text>
 						<text class="section-subtitle">{{ getSectionSubtitle() }}</text>
 					</view>
 					<view class="list">
@@ -88,7 +88,7 @@
 		</scroll-view>
 
 		<view class="bottom-cta">
-			<button class="button-soft bottom-create-btn" @click="createCircle">{{ getListFlag() === 1 ? '再发起一局' : '我来组一局' }}</button>
+			<button class="button-soft bottom-create-btn" @click="createCircle">{{ getListFlag() === 1 ? '再建一个圈子' : '我来建个圈子' }}</button>
 		</view>
 	</view>
 </template>
