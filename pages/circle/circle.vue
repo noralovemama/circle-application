@@ -106,15 +106,6 @@
 	} from '@/request/api'
 	import { normalizeImageForDisplay, pad2 } from '@/utils/image'
 
-	const EUROPE_CIRCLE_ID = 'bf0208a16f2f74c654597fb5de2eeea8'
-	const EUROPE_CIRCLE_NAME = '约人去欧洲'
-	const EUROPE_CIRCLE_INTRO = '约几个互联网工作的人一起去欧洲旅游，希望是从事产品和研发相关工作，喜欢户外和旅行的'
-	const EUROPE_CIRCLE_COFFEE_SHOP = 'Manner Coffee(西溪亲橙里店)'
-
-	function pickStableCoffeeShop() {
-		return EUROPE_CIRCLE_COFFEE_SHOP
-	}
-
 	function extractStructuredIntroduction(introduction = '') {
 		const text = String(introduction || '').trim()
 		if (!text) return null
@@ -384,15 +375,8 @@
 				return item.ownerName ? item.ownerName : "某某"
 			},
 
-			isEuropeCircle(item = {}) {
-				return String(item.circleId || '') === EUROPE_CIRCLE_ID || String(item.circleName || '').trim() === EUROPE_CIRCLE_NAME
-			},
-
 			getCircleVenue(item = {}) {
 				if (item.activityLocation) return item.activityLocation
-				if (this.isEuropeCircle(item)) {
-					return pickStableCoffeeShop(item.circleId || item.circleName)
-				}
 				return ''
 			},
 
@@ -401,10 +385,7 @@
 			},
 
 			getCircleSummary(item) {
-				if (this.isEuropeCircle(item)) {
-					return EUROPE_CIRCLE_INTRO
-				}
-				return formatIntroductionForDisplay(item.introduction) || item.slogan || '先因为共同兴趣坐下来，再慢慢认识彼此。固定 6 人，轻松开场，也保留一点深入交流的机会。'
+				return formatIntroductionForDisplay(item.introduction) || item.slogan || '暂无介绍'
 			},
 
 			getDistanceLabel(item) {
@@ -426,18 +407,11 @@
 			},
 
 			getCircleTags(item) {
-				if (this.isEuropeCircle(item)) {
-					const venue = this.getCircleVenue(item)
-					return venue ? [venue] : []
-				}
 				const source = [item.topic, item.slogan, this.getCircleVenue(item)].filter(Boolean)
 				return source.slice(0, 3)
 			},
 
 			getDecisionHint(item) {
-				if (this.isEuropeCircle(item)) {
-					return '入局后可以先在线上留言沟通，然后在指定的时间地点喝杯咖啡噢'
-				}
 				const members = item.circleUserItemList || item.userList || item.members || []
 				const currentMembers = item.memberCount !== undefined && item.memberCount !== null
 					? Number(item.memberCount)

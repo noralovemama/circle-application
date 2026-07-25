@@ -142,15 +142,6 @@
 	import { useUserStore } from '@/store/user'
 	import { normalizeImageForDisplay, pad2, toSubmittableImageBase64 } from '@/utils/image'
 
-	const EUROPE_CIRCLE_ID = 'bf0208a16f2f74c654597fb5de2eeea8'
-	const EUROPE_CIRCLE_NAME = '约人去欧洲'
-	const EUROPE_CIRCLE_INTRO = '约几个互联网工作的人一起去欧洲旅游，希望是从事产品和研发相关工作，喜欢户外和旅行的'
-	const EUROPE_CIRCLE_COFFEE_SHOP = 'Manner Coffee(西溪亲橙里店)'
-
-	function pickStableCoffeeShop() {
-		return EUROPE_CIRCLE_COFFEE_SHOP
-	}
-
 	function extractStructuredIntroduction(introduction = '') {
 		const text = String(introduction || '').trim()
 		if (!text) return null
@@ -278,22 +269,13 @@
 				return this.displayDescription
 			},
 			displayDescription() {
-				if (this.isEuropeCircle(this.circle)) {
-					return EUROPE_CIRCLE_INTRO
-				}
-				return formatIntroductionForDisplay(this.circle.introduction) || this.circle.slogan || '这局还没有写很长的介绍，但你可以先从主题、时间和参与成员判断是不是适合自己。'
+				return formatIntroductionForDisplay(this.circle.introduction) || this.circle.slogan || '暂无介绍'
 			},
 			displayLocation() {
 				if (this.circle.activityLocation) return this.circle.activityLocation
-				if (this.isEuropeCircle(this.circle)) {
-					return pickStableCoffeeShop(this.circle.circleId || this.circle.circleName)
-				}
 				return '地点待定'
 			},
 			locationTip() {
-				if (this.isEuropeCircle(this.circle)) {
-					return '先在留言区聊起来，再去咖啡，畅聊这件想做的事'
-				}
 				return '先在留言区聊起来，再去线下见面'
 			},
 			memberSummary() {
@@ -301,9 +283,6 @@
 				return `现在有 ${this.memberList.length} / ${maxMembers} 位成员`
 			},
 			actionNote() {
-				if (this.isEuropeCircle(this.circle)) {
-					return '先在留言区聊起来，再去咖啡，畅聊这件想做的事'
-				}
 				return '先在留言区聊起来，再去线下见面'
 			}
 		},
@@ -388,9 +367,6 @@
 			},
 			getAvatar(item) {
 				return normalizeImageForDisplay(item.image, '/static/default-avatar.png')
-			},
-			isEuropeCircle(item = {}) {
-				return String(item.circleId || '') === EUROPE_CIRCLE_ID || String(item.circleName || '').trim() === EUROPE_CIRCLE_NAME
 			},
 			getCommentAvatar(comment) {
 				return normalizeImageForDisplay(comment && comment.userImage, '/static/default-avatar.png')
