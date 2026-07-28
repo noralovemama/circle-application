@@ -254,6 +254,16 @@
 				})
 
 				const userId = await this.requireLoginForList()
+				const fallbackLocation = {
+					longitude: DEFAULT_FALLBACK_LOCATION.longitude,
+					latitude: DEFAULT_FALLBACK_LOCATION.latitude
+				}
+
+				// 先用默认坐标请求真实列表，避免首页被定位权限或回调卡住
+				this.loadCircleListWithLocation({
+					userId,
+					...fallbackLocation
+				})
 
 				uni.getLocation({
 					type: 'gcj02',
@@ -264,16 +274,7 @@
 						this.loadCircleListWithLocation({ userId, longitude, latitude })
 					},
 					fail: (err) => {
-						console.error('获取位置失败，按非附近排序加载真实圈子列表：', err)
-						uni.showToast({
-							title: '未获取到定位，先按默认位置展示圈子',
-							icon: 'none'
-						})
-						this.loadCircleListWithLocation({
-							userId,
-							longitude: DEFAULT_FALLBACK_LOCATION.longitude,
-							latitude: DEFAULT_FALLBACK_LOCATION.latitude
-						})
+						console.error('获取位置失败，继续使用默认位置展示圈子：', err)
 					}
 				})
 			},

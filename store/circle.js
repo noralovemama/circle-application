@@ -1,6 +1,35 @@
 import { defineStore } from 'pinia'
 import { circleApi } from '@/request/api'
 
+const DEFAULT_FALLBACK_LOCATION = {
+  longitude: 120.1536,
+  latitude: 30.2875
+}
+
+const normalizeCoordinate = (value) => {
+  if (value === undefined || value === null || value === '') return ''
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : ''
+}
+
+const resolveListLocation = ({ longitude, latitude } = {}) => {
+  const normalizedLongitude = normalizeCoordinate(longitude)
+  const normalizedLatitude = normalizeCoordinate(latitude)
+
+  if (normalizedLongitude === '' || normalizedLatitude === '') {
+    return {
+      ...DEFAULT_FALLBACK_LOCATION,
+      usedFallback: true
+    }
+  }
+
+  return {
+    longitude: normalizedLongitude,
+    latitude: normalizedLatitude,
+    usedFallback: false
+  }
+}
+
 export const useCircleStore = defineStore('circle', {
   state: () => ({
     list: [],
@@ -103,11 +132,12 @@ export const useCircleStore = defineStore('circle', {
       }
 
       try {
+        const requestLocation = resolveListLocation({ longitude, latitude })
         let params = {
           current: this.pagination.current,
           size: this.pagination.size,
-          longitude, 
-          latitude,
+          longitude: requestLocation.longitude,
+          latitude: requestLocation.latitude,
           flag
         }
 		if (userId){
@@ -115,7 +145,27 @@ export const useCircleStore = defineStore('circle', {
 		}
         console.log('[Store] 请求参数:', params)
 
-        const res = await circleApi.getCircleList(params)
+        let res
+        try {
+          res = await circleApi.getCircleList(params)
+        } catch (error) {
+          if (!requestLocation.usedFallback) {
+            const fallbackParams = {
+              ...params,
+              longitude: DEFAULT_FALLBACK_LOCATION.longitude,
+              latitude: DEFAULT_FALLBACK_LOCATION.latitude
+            }
+            console.warn('[Store] 列表请求失败，改用默认坐标重试:', {
+              originalLongitude: params.longitude,
+              originalLatitude: params.latitude,
+              error: error && error.message ? error.message : error
+            })
+            res = await circleApi.getCircleList(fallbackParams)
+            params = fallbackParams
+          } else {
+            throw error
+          }
+        }
         console.log('[Store] 请求响应:', res)
 
         if (res && res.status === 10000 && res.data) {
@@ -143,7 +193,11 @@ export const useCircleStore = defineStore('circle', {
           }
           this.error = null
 
-          await this.hydrateCircleList(records, { userId, longitude, latitude })
+          await this.hydrateCircleList(records, {
+            userId,
+            longitude: params.longitude,
+            latitude: params.latitude
+          })
           
           // 更新分页信息
           const hasMore = size > 0 && (hasTotal ? current * size < total : records.length >= size)
