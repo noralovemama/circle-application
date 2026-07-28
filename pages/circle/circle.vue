@@ -101,6 +101,11 @@
 	} from '@/request/api'
 	import { normalizeImageForDisplay, pad2 } from '@/utils/image'
 
+	const DEFAULT_FALLBACK_LOCATION = {
+		longitude: 120.1536,
+		latitude: 30.2875
+	}
+
 	function extractStructuredIntroduction(introduction = '') {
 		const text = String(introduction || '').trim()
 		if (!text) return null
@@ -261,13 +266,13 @@
 					fail: (err) => {
 						console.error('获取位置失败，按非附近排序加载真实圈子列表：', err)
 						uni.showToast({
-							title: '未获取到定位，先展示真实列表',
+							title: '未获取到定位，先按默认位置展示圈子',
 							icon: 'none'
 						})
 						this.loadCircleListWithLocation({
 							userId,
-							longitude: '',
-							latitude: ''
+							longitude: DEFAULT_FALLBACK_LOCATION.longitude,
+							latitude: DEFAULT_FALLBACK_LOCATION.latitude
 						})
 					}
 				})
