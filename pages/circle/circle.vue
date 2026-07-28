@@ -7,14 +7,9 @@
 			<view class="page-content">
 
 				<view class="hero-card">
-					<view class="hero-eyebrow">{{ getListFlag() === 1 ? '我的小局' : (isVisitorMode ? '先逛逛' : '小群友') }}</view>
+					<view class="hero-eyebrow">{{ getListFlag() === 1 ? '我的圈子' : (isVisitorMode ? '先看看' : '附近的圈子') }}</view>
 					<text class="hero-title">{{ getHeroTitle() }}</text>
 					<text class="hero-copy">{{ getHeroCopy() }}</text>
-					<view class="hero-points">
-						<text class="hero-point">{{ getListFlag() === 1 ? '继续留言' : (isVisitorMode ? '先看真实圈子' : '固定 6 人') }}</text>
-						<text class="hero-point">{{ getListFlag() === 1 ? '回看安排' : (isVisitorMode ? '合适再登录加入' : '先留言再见面') }}</text>
-						<text class="hero-point">{{ getListFlag() === 1 ? '补充细节' : '聊得来再去见朋友' }}</text>
-					</view>
 				</view>
 
 				<view class="section list-section">
@@ -61,7 +56,7 @@
 								:class="{ 'group-action-disabled': isCircleStarted(item) }"
 								@click.stop="navigateToDetail(item)"
 							>
-								<text class="group-action-text">{{ isCircleStarted(item) ? '这局已经开始' : '进去看看这局' }}</text>
+								<text class="group-action-text">{{ isCircleStarted(item) ? '活动已开始' : '查看圈子' }}</text>
 								<text class="group-action-arrow">{{ isCircleStarted(item) ? '·' : '→' }}</text>
 							</view>
 						</view>
@@ -75,7 +70,7 @@
 
 					<view class="empty-card" v-else-if="!circleStore.loading && circleStore.list.length === 0">
 						<text class="empty-title">暂时还没有圈子</text>
-						<text class="empty-copy">可以先发起一个 6 人小局，看看附近有没有志同道合的人。</text>
+						<text class="empty-copy">可以先建一个圈子，看看附近有没有志同道合的人。</text>
 					</view>
 				</view>
 
@@ -339,7 +334,7 @@
 
 			getHeroTitle() {
 				if (this.getListFlag() === 1) {
-					return '看看你发起和加入的小局'
+					return '看看你发起和加入的圈子'
 				}
 				if (this.isVisitorMode) {
 					return '先看看附近都在聊什么，再决定要不要加入'
@@ -349,17 +344,17 @@
 
 			getHeroCopy() {
 				if (this.getListFlag() === 1) {
-					return '这里会收起你正在参与的局，也方便你继续回看、补充和分享。'
+					return '这里会收起你发起和加入的圈子，方便继续查看。'
 				}
 				if (this.isVisitorMode) {
-					return '列表里展示的都是当前真实在组的局。先看主题、时间和发起人，合适再登录加入。'
+					return '列表里展示的都是真实圈子，先看主题、时间和发起人。'
 				}
-				return '最多6人小群，先在线上聊共同兴趣，再找个咖啡店见一面'
+				return '最多 6 人，围绕共同兴趣约线下见面。'
 			},
 
 			getSectionSubtitle() {
 				if (this.getListFlag() === 1) {
-					return '回到你已经参与的局'
+					return '回到你已经参与的圈子'
 				}
 				if (this.isVisitorMode) {
 					return '先看主题、时间和谁发起，再决定要不要加入'
@@ -420,11 +415,11 @@
 				const spotsLeft = Math.max(0, maxMembers - currentMembers)
 				const budget = Number(item.money || item.budget || 0)
 
-				if (spotsLeft <= 1) return '快满员了，感兴趣的话可以早点加入，先在留言区打个招呼。'
-				if (currentMembers <= 2) return '现在人还不多，适合先加入，慢慢把聊天氛围带起来。'
-				if (!budget) return '门槛比较低，适合第一次先试着参加一局。'
-				if (item.activityLocation) return '地点已经写得比较明确，方便你判断值不值得专门过去。'
-				return '先看主题和时间，合适再加入，会比盲目社交轻松很多。'
+				if (spotsLeft <= 1) return '快满员了，感兴趣的话可以早点加入。'
+				if (currentMembers <= 2) return '现在人还不多，适合先加入。'
+				if (!budget) return '门槛比较低，适合第一次参加。'
+				if (item.activityLocation) return '地点已经写得比较明确，方便你判断是否值得过去。'
+				return '先看主题和时间，合适再加入。'
 			},
 
 			formatActivityLabel(value) {
