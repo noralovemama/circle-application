@@ -142,6 +142,34 @@
 	import { useUserStore } from '@/store/user'
 	import { normalizeImageForDisplay, pad2, toSubmittableImageBase64 } from '@/utils/image'
 
+	const DEFAULT_FALLBACK_LOCATION = {
+		longitude: 120.1536,
+		latitude: 30.2875
+	}
+
+	function normalizeCoordinate(value) {
+		if (value === undefined || value === null || value === '') return ''
+		const numericValue = Number(value)
+		return Number.isFinite(numericValue) ? numericValue : ''
+	}
+
+	function resolveDetailLocation(longitude, latitude) {
+		const normalizedLongitude = normalizeCoordinate(longitude)
+		const normalizedLatitude = normalizeCoordinate(latitude)
+		if (normalizedLongitude === '' || normalizedLatitude === '') {
+			return {
+				longitude: DEFAULT_FALLBACK_LOCATION.longitude,
+				latitude: DEFAULT_FALLBACK_LOCATION.latitude,
+				usedFallback: true
+			}
+		}
+		return {
+			longitude: normalizedLongitude,
+			latitude: normalizedLatitude,
+			usedFallback: false
+		}
+	}
+
 	function extractStructuredIntroduction(introduction = '') {
 		const text = String(introduction || '').trim()
 		if (!text) return null
@@ -343,6 +371,14 @@
 				return isNaN(date.getTime()) ? null : date
 			},
 			async loadCurrentPage(options){
+				const fallbackLocation = {
+					longitude: DEFAULT_FALLBACK_LOCATION.longitude,
+					latitude: DEFAULT_FALLBACK_LOCATION.latitude
+				}
+				this.longitude = fallbackLocation.longitude
+				this.latitude = fallbackLocation.latitude
+				await this.loadCircleDetail(options, fallbackLocation.longitude, fallbackLocation.latitude)
+
 				uni.getLocation({
 					type: 'gcj02',
 					success: async ({
@@ -354,14 +390,7 @@
 						await this.loadCircleDetail(options, longitude, latitude)
 					},
 					fail: (err) => {
-						console.error('获取位置失败：', err)
-						this.longitude = ''
-						this.latitude = ''
-						uni.showToast({
-							title: '未获取到定位，先加载真实详情',
-							icon: 'none'
-						})
-						this.loadCircleDetail(options, this.longitude, this.latitude)
+						console.error('获取位置失败，继续使用默认位置加载详情：', err)
 					}
 				})
 			},
@@ -405,6 +434,10 @@
 				const isLoggedIn = await this.userStore.checkLoginSilently()
 				this.userId = isLoggedIn ? await this.userStore.getUserId() : ''
 				if (options && options.circleId) {
+					const requestLocation = resolveDetailLocation(longitude, latitude)
+					this.longitude = requestLocation.longitude
+					this.latitude = requestLocation.latitude
+
 					// 先用路由参数设置基本信息
 					this.circle = {
 						...this.circle,
@@ -413,7 +446,28 @@
 				
 					// 获取详细信息 
 					try {
-						const res = await circleApi.getCircleDetail(options.circleId, this.userId, longitude, latitude)
+						let res
+						try {
+							res = await circleApi.getCircleDetail(
+								options.circleId,
+								this.userId,
+								requestLocation.longitude,
+								requestLocation.latitude
+							)
+						} catch (error) {
+							if (!requestLocation.usedFallback) {
+								res = await circleApi.getCircleDetail(
+									options.circleId,
+									this.userId,
+									DEFAULT_FALLBACK_LOCATION.longitude,
+									DEFAULT_FALLBACK_LOCATION.latitude
+								)
+								this.longitude = DEFAULT_FALLBACK_LOCATION.longitude
+								this.latitude = DEFAULT_FALLBACK_LOCATION.latitude
+							} else {
+								throw error
+							}
+						}
 						if (res.status === 10000 && res.data) {
 							this.circle = {
 								...this.circle,
